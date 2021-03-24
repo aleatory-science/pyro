@@ -44,21 +44,6 @@ class RunLV(Function):
 
 run_lv = RunLV.apply
 
-
-def elbo(model, guide, *args, **kwargs):
-    guide_trace = trace(guide).get_trace(*args, **kwargs)
-    model_trace = trace(replay(model, guide_trace)).get_trace(*args, **kwargs)
-    elbo = 0.
-    for site in model_trace.values():
-        if site["type"] == "sample":
-            elbo = elbo + site["fn"].log_prob(site["value"]).sum()
-    for site in guide_trace.values():
-        if site["type"] == "sample":
-            elbo = elbo - site["fn"].log_prob(site["value"]).sum()
-    return -elbo
-
-
-
 if __name__ == '__main__':
     evolution = run_lv(.1, 1000,
                        torch.Tensor([1.]),

@@ -59,19 +59,6 @@ class LotkaVolterraStepFunction(Function):
         return grad_state, grad_growth_prey, grad_predation, grad_growth_predator, grad_decline_predator
 
 
-lotka_volterra_step = LotkaVolterraStepFunction.apply
-
-def elbo(model, guide, *args, **kwargs):
-    guide_trace = trace(guide).get_trace(*args, **kwargs)
-    model_trace = trace(replay(model, guide_trace)).get_trace(*args, **kwargs)
-    elbo = 0.
-    for site in model_trace.values():
-        if site["type"] == "sample":
-            elbo = elbo + site["fn"].log_prob(site["value"]).sum()
-    for site in guide_trace.values():
-        if site["type"] == "sample":
-            elbo = elbo - site["fn"].log_prob(site["value"]).sum()
-    return -elbo
 
 
 if __name__ == '__main__':

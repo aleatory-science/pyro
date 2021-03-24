@@ -38,6 +38,7 @@ class LotkaVolterraStepFunction(Function):
                                        (gpred * s[1], gpred * s[0] - decl)),
                                       dtype=grad_output.dtype)
             grad_state = grad_output @ grad_state.reshape(2, 2)
+            print(grad_state)
         if ctx.needs_input_grad[1]:
             grad_growth_prey = torch.zeros(2, dtype=grad_output.dtype)
             grad_growth_prey[0] = state[0]
@@ -60,6 +61,19 @@ class LotkaVolterraStepFunction(Function):
 
 lotka_volterra_step = LotkaVolterraStepFunction.apply
 
+def elbo(model, guide, *args, **kwargs):
+    guide_trace = trace(guide).get_trace(*args, **kwargs)
+    model_trace = trace(replay(model, guide_trace)).get_trace(*args, **kwargs)
+    elbo = 0.
+    for site in model_trace.values():
+        if site["type"] == "sample":
+            elbo = elbo + site["fn"].log_prob(site["value"]).sum()
+    for site in guide_trace.values():
+        if site["type"] == "sample":
+            elbo = elbo - site["fn"].log_prob(site["value"]).sum()
+    return -elbo
+
+
 if __name__ == '__main__':
     print(lotka_volterra_step(
         torch.Tensor((1., 1.)),
@@ -67,6 +81,13 @@ if __name__ == '__main__':
         torch.Tensor([.4]),
         torch.Tensor([.2]),
         torch.Tensor([.3])))
+
+    step = lotka_volterra_step(
+        torch.Tensor((1., 1.)),
+        torch.Tensor([.8]),
+        torch.Tensor([.4]),
+        torch.Tensor([.2]),
+        torch.Tensor([.3]))
 
     input = (torch.tensor((1., 1.), dtype=torch.double, requires_grad=True),
              torch.tensor([.8], dtype=torch.double, requires_grad=True),

@@ -1,17 +1,17 @@
 from functools import partial
-from typing import Tuple, Any
+from typing import Tuple
 
 import matplotlib.pyplot as plt
 import torch
 from torch import Tensor
 
-from pyro import sample, plate
+from lotka_volterra_func import run_lv
+from pyro import sample, plate, param
+from pyro.distributions.constraints import positive
 from pyro.distributions import HalfNormal, Normal
 from pyro.infer import SVI, Trace_ELBO
 from pyro.infer.autoguide import AutoDelta
 from pyro.optim import ClippedAdam
-from lv_pytorch import lotka_volterra_step
-
 
 NOISE_SCALE = .3
 
@@ -44,6 +44,9 @@ def runge_kutta(fn, step_size, num_steps, init_state, **kwargs):
     return accum
 
 
+
+
+
 def lv_step(state: Tuple[float, float],  # prey, predator
             prey_growth_rate: float,  # prey_growth_rate
             predation_rate: float,  # predation_rate
@@ -74,9 +77,10 @@ def model(times, obs, step_size=.3, num_steps=300):
     predator_growth_rate = sample('predator_growth_rate', prior_dist)
     predator_decline_rate = sample('predator_decline_rate', prior_dist)
 
-    pp_res = runge_kutta(  # Futhark
-        lotka_volterra_step, step_size, num_steps,
-        init_state=torch.stack((prey_init, predator_init)),
+    pp_res = run_lv(  # Futhark
+        step_size, num_steps,
+        prey_init=prey_init,
+        predator_init=predator_init,
         growth_prey=prey_growth_rate,
         predation=predation_rate,
         growth_predator=predator_growth_rate,
@@ -88,7 +92,8 @@ def model(times, obs, step_size=.3, num_steps=300):
 
 if __name__ == '__main__':
     system = dict(
-        init_state=(1., 1.),  # prey, predator
+        init_prey=1.,
+        init_predator=1.,  # prey, predator
         growth_prey=.45,
         predation=.4,
         growth_predator=.1,
@@ -99,7 +104,7 @@ if __name__ == '__main__':
 
     system = {k: Tensor(v) if isinstance(v, tuple) else Tensor([v]) for k, v in system.items()}
 
-    pp_res = runge_kutta(lotka_volterra_step, .3, 300, **system)
+    pp_res = torch.tensor(run_lv(.3, 300, *system.values()))
     obs_times = Tensor([28, 78, 128, 173, 228, 278]).type(torch.long)
     obs = pp_res[obs_times]
     data = (obs_times, obs + Normal(0, NOISE_SCALE, ).sample((1000, *obs.shape,)))

@@ -1501,492 +1501,501 @@ class lotka_volterra:
   def __init__(self):
     pass
     self.constants = {}
-  def futhark_main(self, step_sizze_5680, num_steps_5681, init_prey_5682,
-                   init_pred_5683, growth_prey_5684, predation_5685,
-                   growth_pred_5686, decline_pred_5687):
-    bounds_invalid_upwards_5688 = slt64(num_steps_5681, np.int64(0))
-    valid_5689 = not(bounds_invalid_upwards_5688)
-    range_valid_c_5690 = True
-    assert valid_5689, ("Error: %s%d%s%d%s%d%s\n\nBacktrace:\n-> #0  /prelude/array.fut:90:3-10\n   #1  /prelude/array.fut:108:18-23\n   #2  lotka_volterra.fut:54:1-62:122\n" % ("Range ",
+  def futhark_main(self, step_sizze_5690, num_steps_5691, init_prey_5692,
+                   init_pred_5693, growth_prey_5694, predation_5695,
+                   growth_pred_5696, decline_pred_5697):
+    bounds_invalid_upwards_5698 = slt64(num_steps_5691, np.int64(0))
+    valid_5699 = not(bounds_invalid_upwards_5698)
+    range_valid_c_5700 = True
+    assert valid_5699, ("Error: %s%d%s%d%s%d%s\n\nBacktrace:\n-> #0  /prelude/array.fut:90:3-10\n   #1  /prelude/array.fut:108:18-23\n   #2  lotka_volterra.fut:54:1-62:122\n" % ("Range ",
                                                                                                                                                                                   np.int64(0),
                                                                                                                                                                                   "..",
                                                                                                                                                                                   np.int64(1),
                                                                                                                                                                                   "..<",
-                                                                                                                                                                                  num_steps_5681,
+                                                                                                                                                                                  num_steps_5691,
                                                                                                                                                                                   " is invalid."))
-    bytes_5999 = (np.int64(4) * num_steps_5681)
-    mem_6000 = allocateMem(bytes_5999)
-    i_6058 = np.int64(0)
-    one_6068 = np.int64(1)
-    for counter_6067 in range(num_steps_5681):
-      writeScalarArray(mem_6000, i_6058, ct.c_float(init_prey_5682))
-      i_6058 += one_6068
-    mem_6002 = allocateMem(bytes_5999)
-    i_6059 = np.int64(0)
-    one_6070 = np.int64(1)
-    for counter_6069 in range(num_steps_5681):
-      writeScalarArray(mem_6002, i_6059, ct.c_float(init_pred_5683))
-      i_6059 += one_6070
-    x_5693 = (step_sizze_5680 / np.float32(2.0))
-    x_5694 = (step_sizze_5680 / np.float32(6.0))
-    curr_state_5700 = init_prey_5682
-    curr_state_5701 = init_pred_5683
-    i_5699 = np.int64(0)
-    one_6072 = np.int64(1)
-    for counter_6071 in range(num_steps_5681):
-      y_5704 = (predation_5685 * curr_state_5701)
-      x_5705 = (growth_prey_5684 - y_5704)
-      dprey_5706 = (curr_state_5700 * x_5705)
-      x_5707 = (growth_pred_5686 * curr_state_5700)
-      x_5708 = (x_5707 - decline_pred_5687)
-      dpred_5709 = (curr_state_5701 * x_5708)
-      y_5710 = (x_5693 * dprey_5706)
-      defunc_1_fn_arg_5711 = (curr_state_5700 + y_5710)
-      y_5712 = (predation_5685 * defunc_1_fn_arg_5711)
-      x_5713 = (growth_prey_5684 - y_5712)
-      dprey_5714 = (defunc_1_fn_arg_5711 * x_5713)
-      x_5715 = (growth_pred_5686 * defunc_1_fn_arg_5711)
-      x_5716 = (x_5715 - decline_pred_5687)
-      dpred_5717 = (defunc_1_fn_arg_5711 * x_5716)
-      y_5718 = (x_5693 * dprey_5714)
-      defunc_1_fn_arg_5719 = (curr_state_5700 + y_5718)
-      y_5720 = (predation_5685 * defunc_1_fn_arg_5719)
-      x_5721 = (growth_prey_5684 - y_5720)
-      dprey_5722 = (defunc_1_fn_arg_5719 * x_5721)
-      x_5723 = (growth_pred_5686 * defunc_1_fn_arg_5719)
-      x_5724 = (x_5723 - decline_pred_5687)
-      dpred_5725 = (defunc_1_fn_arg_5719 * x_5724)
-      y_5726 = (step_sizze_5680 * dprey_5722)
-      defunc_1_fn_arg_5727 = (curr_state_5700 + y_5726)
-      y_5728 = (predation_5685 * defunc_1_fn_arg_5727)
-      x_5729 = (growth_prey_5684 - y_5728)
-      dprey_5730 = (defunc_1_fn_arg_5727 * x_5729)
-      x_5731 = (growth_pred_5686 * defunc_1_fn_arg_5727)
-      x_5732 = (x_5731 - decline_pred_5687)
-      dpred_5733 = (defunc_1_fn_arg_5727 * x_5732)
-      y_5734 = (np.float32(2.0) * dprey_5714)
-      x_5735 = (dprey_5706 + y_5734)
-      y_5736 = (np.float32(2.0) * dprey_5722)
-      x_5737 = (x_5735 + y_5736)
-      y_5738 = (dprey_5730 + x_5737)
-      y_5739 = (x_5694 * y_5738)
-      loopres_5740 = (curr_state_5700 + y_5739)
-      y_5741 = (np.float32(2.0) * dpred_5717)
-      x_5742 = (dpred_5709 + y_5741)
-      y_5743 = (np.float32(2.0) * dpred_5725)
-      x_5744 = (x_5742 + y_5743)
-      y_5745 = (dpred_5733 + x_5744)
-      y_5746 = (x_5694 * y_5745)
-      loopres_5747 = (curr_state_5701 + y_5746)
-      writeScalarArray(mem_6000, i_5699, ct.c_float(loopres_5740))
-      writeScalarArray(mem_6002, i_5699, ct.c_float(loopres_5747))
-      curr_state_tmp_6060 = loopres_5740
-      curr_state_tmp_6061 = loopres_5747
-      curr_state_5700 = curr_state_tmp_6060
-      curr_state_5701 = curr_state_tmp_6061
-      i_5699 += one_6072
-    states_5695 = curr_state_5700
-    states_5696 = curr_state_5701
-    binop_x_6028 = (np.int64(2) * num_steps_5681)
-    bytes_6027 = (np.int64(4) * binop_x_6028)
-    mem_6029 = allocateMem(bytes_6027)
-    mem_6044 = allocateMem(np.int64(8))
-    i_5997 = np.int64(0)
-    one_6074 = np.int64(1)
-    for counter_6073 in range(num_steps_5681):
-      x_5751 = indexArray(mem_6000, i_5997, ct.c_float, np.float32)
-      x_5752 = indexArray(mem_6002, i_5997, ct.c_float, np.float32)
-      writeScalarArray(mem_6044, np.int64(0), ct.c_float(x_5751))
-      writeScalarArray(mem_6044, np.int64(1), ct.c_float(x_5752))
-      ct.memmove(addressOffset(mem_6029, ((i_5997 * np.int64(2)) * np.int64(4)),
-                               ct.c_byte), addressOffset(mem_6044, np.int64(0),
+    bytes_6024 = (np.int64(4) * num_steps_5691)
+    mem_6025 = allocateMem(bytes_6024)
+    i_6083 = np.int64(0)
+    one_6093 = np.int64(1)
+    for counter_6092 in range(num_steps_5691):
+      writeScalarArray(mem_6025, i_6083, ct.c_float(init_prey_5692))
+      i_6083 += one_6093
+    mem_6027 = allocateMem(bytes_6024)
+    i_6084 = np.int64(0)
+    one_6095 = np.int64(1)
+    for counter_6094 in range(num_steps_5691):
+      writeScalarArray(mem_6027, i_6084, ct.c_float(init_pred_5693))
+      i_6084 += one_6095
+    x_5703 = (step_sizze_5690 / np.float32(2.0))
+    x_5704 = (step_sizze_5690 / np.float32(6.0))
+    curr_state_5710 = init_prey_5692
+    curr_state_5711 = init_pred_5693
+    i_5709 = np.int64(0)
+    one_6097 = np.int64(1)
+    for counter_6096 in range(num_steps_5691):
+      y_5714 = (predation_5695 * curr_state_5711)
+      x_5715 = (growth_prey_5694 - y_5714)
+      dprey_5716 = (curr_state_5710 * x_5715)
+      x_5717 = (growth_pred_5696 * curr_state_5710)
+      x_5718 = (x_5717 - decline_pred_5697)
+      dpred_5719 = (curr_state_5711 * x_5718)
+      y_5720 = (x_5703 * dprey_5716)
+      defunc_1_fn_arg_5721 = (curr_state_5711 + y_5720)
+      defunc_0_fn_arg_5722 = (curr_state_5710 + y_5720)
+      y_5723 = (predation_5695 * defunc_1_fn_arg_5721)
+      x_5724 = (growth_prey_5694 - y_5723)
+      dprey_5725 = (defunc_0_fn_arg_5722 * x_5724)
+      x_5726 = (growth_pred_5696 * defunc_0_fn_arg_5722)
+      x_5727 = (x_5726 - decline_pred_5697)
+      dpred_5728 = (defunc_1_fn_arg_5721 * x_5727)
+      y_5729 = (x_5703 * dprey_5725)
+      defunc_1_fn_arg_5730 = (curr_state_5711 + y_5729)
+      defunc_0_fn_arg_5731 = (curr_state_5710 + y_5729)
+      y_5732 = (predation_5695 * defunc_1_fn_arg_5730)
+      x_5733 = (growth_prey_5694 - y_5732)
+      dprey_5734 = (defunc_0_fn_arg_5731 * x_5733)
+      x_5735 = (growth_pred_5696 * defunc_0_fn_arg_5731)
+      x_5736 = (x_5735 - decline_pred_5697)
+      dpred_5737 = (defunc_1_fn_arg_5730 * x_5736)
+      y_5738 = (step_sizze_5690 * dprey_5734)
+      defunc_1_fn_arg_5739 = (curr_state_5711 + y_5738)
+      defunc_0_fn_arg_5740 = (curr_state_5710 + y_5738)
+      y_5741 = (predation_5695 * defunc_1_fn_arg_5739)
+      x_5742 = (growth_prey_5694 - y_5741)
+      dprey_5743 = (defunc_0_fn_arg_5740 * x_5742)
+      x_5744 = (growth_pred_5696 * defunc_0_fn_arg_5740)
+      x_5745 = (x_5744 - decline_pred_5697)
+      dpred_5746 = (defunc_1_fn_arg_5739 * x_5745)
+      y_5747 = (np.float32(2.0) * dprey_5725)
+      x_5748 = (dprey_5716 + y_5747)
+      y_5749 = (np.float32(2.0) * dprey_5734)
+      x_5750 = (x_5748 + y_5749)
+      y_5751 = (dprey_5743 + x_5750)
+      y_5752 = (x_5704 * y_5751)
+      loopres_5753 = (curr_state_5710 + y_5752)
+      y_5754 = (np.float32(2.0) * dpred_5728)
+      x_5755 = (dpred_5719 + y_5754)
+      y_5756 = (np.float32(2.0) * dpred_5737)
+      x_5757 = (x_5755 + y_5756)
+      y_5758 = (dpred_5746 + x_5757)
+      y_5759 = (x_5704 * y_5758)
+      loopres_5760 = (curr_state_5711 + y_5759)
+      writeScalarArray(mem_6025, i_5709, ct.c_float(loopres_5753))
+      writeScalarArray(mem_6027, i_5709, ct.c_float(loopres_5760))
+      curr_state_tmp_6085 = loopres_5753
+      curr_state_tmp_6086 = loopres_5760
+      curr_state_5710 = curr_state_tmp_6085
+      curr_state_5711 = curr_state_tmp_6086
+      i_5709 += one_6097
+    states_5705 = curr_state_5710
+    states_5706 = curr_state_5711
+    binop_x_6053 = (np.int64(2) * num_steps_5691)
+    bytes_6052 = (np.int64(4) * binop_x_6053)
+    mem_6054 = allocateMem(bytes_6052)
+    mem_6069 = allocateMem(np.int64(8))
+    i_6022 = np.int64(0)
+    one_6099 = np.int64(1)
+    for counter_6098 in range(num_steps_5691):
+      x_5764 = indexArray(mem_6025, i_6022, ct.c_float, np.float32)
+      x_5765 = indexArray(mem_6027, i_6022, ct.c_float, np.float32)
+      writeScalarArray(mem_6069, np.int64(0), ct.c_float(x_5764))
+      writeScalarArray(mem_6069, np.int64(1), ct.c_float(x_5765))
+      ct.memmove(addressOffset(mem_6054, ((i_6022 * np.int64(2)) * np.int64(4)),
+                               ct.c_byte), addressOffset(mem_6069, np.int64(0),
                                                          ct.c_byte),
                  (np.int64(2) * np.int32(4)))
-      i_5997 += one_6074
-    mem_6000 = None
-    mem_6002 = None
-    mem_6044 = None
-    mem_6055 = allocateMem(bytes_6027)
-    ct.memmove(addressOffset(mem_6055, np.int64(0), ct.c_byte),
-               addressOffset(mem_6029, np.int64(0), ct.c_byte),
-               ((num_steps_5681 * np.int64(2)) * np.int32(4)))
-    mem_6029 = None
-    out_mem_6057 = mem_6055
-    return out_mem_6057
-  def futhark_runge_kutta_fwd(self, step_sizze_5754, num_steps_5755,
-                              init_prey_5756, init_pred_5757, growth_prey_5758,
-                              predation_5759, growth_pred_5760,
-                              decline_pred_5761, init_prey_tan_5762,
-                              init_pred_tan_5763, growth_prey_tan_5764,
-                              predation_tan_5765, growth_pred_tan_5766,
-                              decline_pred_tan_5767):
-    bounds_invalid_upwards_5768 = slt64(num_steps_5755, np.int64(0))
-    valid_5769 = not(bounds_invalid_upwards_5768)
-    range_valid_c_5770 = True
-    assert valid_5769, ("Error: %s%d%s%d%s%d%s\n\nBacktrace:\n-> #0  /prelude/array.fut:90:3-10\n   #1  /prelude/array.fut:108:18-23\n   #2  lotka_volterra.fut:64:1-92:35\n" % ("Range ",
+      i_6022 += one_6099
+    mem_6025 = None
+    mem_6027 = None
+    mem_6069 = None
+    mem_6080 = allocateMem(bytes_6052)
+    ct.memmove(addressOffset(mem_6080, np.int64(0), ct.c_byte),
+               addressOffset(mem_6054, np.int64(0), ct.c_byte),
+               ((num_steps_5691 * np.int64(2)) * np.int32(4)))
+    mem_6054 = None
+    out_mem_6082 = mem_6080
+    return out_mem_6082
+  def futhark_runge_kutta_fwd(self, step_sizze_5767, num_steps_5768,
+                              init_prey_5769, init_pred_5770, growth_prey_5771,
+                              predation_5772, growth_pred_5773,
+                              decline_pred_5774, init_prey_tan_5775,
+                              init_pred_tan_5776, growth_prey_tan_5777,
+                              predation_tan_5778, growth_pred_tan_5779,
+                              decline_pred_tan_5780):
+    bounds_invalid_upwards_5781 = slt64(num_steps_5768, np.int64(0))
+    valid_5782 = not(bounds_invalid_upwards_5781)
+    range_valid_c_5783 = True
+    assert valid_5782, ("Error: %s%d%s%d%s%d%s\n\nBacktrace:\n-> #0  /prelude/array.fut:90:3-10\n   #1  /prelude/array.fut:108:18-23\n   #2  lotka_volterra.fut:64:1-92:35\n" % ("Range ",
                                                                                                                                                                                  np.int64(0),
                                                                                                                                                                                  "..",
                                                                                                                                                                                  np.int64(1),
                                                                                                                                                                                  "..<",
-                                                                                                                                                                                 num_steps_5755,
+                                                                                                                                                                                 num_steps_5768,
                                                                                                                                                                                  " is invalid."))
-    x_5771 = (step_sizze_5754 / np.float32(2.0))
-    x_5772 = (step_sizze_5754 / np.float32(6.0))
-    bytes_5999 = (np.int64(4) * num_steps_5755)
-    mem_6000 = allocateMem(bytes_5999)
-    i_6058 = np.int64(0)
-    one_6076 = np.int64(1)
-    for counter_6075 in range(num_steps_5755):
-      writeScalarArray(mem_6000, i_6058, ct.c_float(init_prey_tan_5762))
-      i_6058 += one_6076
-    mem_6002 = allocateMem(bytes_5999)
-    i_6059 = np.int64(0)
-    one_6078 = np.int64(1)
-    for counter_6077 in range(num_steps_5755):
-      writeScalarArray(mem_6002, i_6059, ct.c_float(init_pred_tan_5763))
-      i_6059 += one_6078
-    binop_y_5872 = (np.float32(-1.0) * decline_pred_tan_5767)
-    curr_state_5788 = init_prey_5756
-    curr_state_tan_5854 = init_prey_tan_5762
-    curr_state_5789 = init_pred_5757
-    curr_state_tan_5855 = init_pred_tan_5763
-    i_5787 = np.int64(0)
-    one_6080 = np.int64(1)
-    for counter_6079 in range(num_steps_5755):
-      y_5792 = (predation_5759 * curr_state_5789)
-      binop_x_5859 = (predation_tan_5765 * curr_state_5789)
-      binop_y_5860 = (predation_5759 * curr_state_tan_5855)
-      y_tan_5858 = (binop_x_5859 + binop_y_5860)
-      x_5793 = (growth_prey_5758 - y_5792)
-      binop_y_5863 = (np.float32(-1.0) * y_tan_5858)
-      x_tan_5861 = (growth_prey_tan_5764 + binop_y_5863)
-      dprey_5794 = (curr_state_5788 * x_5793)
-      binop_x_5865 = (x_5793 * curr_state_tan_5854)
-      binop_y_5866 = (curr_state_5788 * x_tan_5861)
-      dprey_tan_5864 = (binop_x_5865 + binop_y_5866)
-      x_5795 = (growth_pred_5760 * curr_state_5788)
-      binop_x_5868 = (growth_pred_tan_5766 * curr_state_5788)
-      binop_y_5869 = (growth_pred_5760 * curr_state_tan_5854)
-      x_tan_5867 = (binop_x_5868 + binop_y_5869)
-      x_5796 = (x_5795 - decline_pred_5761)
-      x_tan_5870 = (x_tan_5867 + binop_y_5872)
-      dpred_5797 = (curr_state_5789 * x_5796)
-      binop_x_5874 = (x_5796 * curr_state_tan_5855)
-      binop_y_5875 = (curr_state_5789 * x_tan_5870)
-      dpred_tan_5873 = (binop_x_5874 + binop_y_5875)
-      y_5798 = (x_5771 * dprey_5794)
-      binop_y_5879 = (x_5771 * dprey_tan_5864)
-      defunc_1_fn_arg_5799 = (curr_state_5788 + y_5798)
-      defunc_1_fn_arg_tan_5880 = (curr_state_tan_5854 + binop_y_5879)
-      y_5800 = (predation_5759 * defunc_1_fn_arg_5799)
-      binop_x_5884 = (predation_tan_5765 * defunc_1_fn_arg_5799)
-      binop_y_5885 = (predation_5759 * defunc_1_fn_arg_tan_5880)
-      y_tan_5883 = (binop_x_5884 + binop_y_5885)
-      x_5801 = (growth_prey_5758 - y_5800)
-      binop_y_5888 = (np.float32(-1.0) * y_tan_5883)
-      x_tan_5886 = (growth_prey_tan_5764 + binop_y_5888)
-      dprey_5802 = (defunc_1_fn_arg_5799 * x_5801)
-      binop_x_5890 = (x_5801 * defunc_1_fn_arg_tan_5880)
-      binop_y_5891 = (defunc_1_fn_arg_5799 * x_tan_5886)
-      dprey_tan_5889 = (binop_x_5890 + binop_y_5891)
-      x_5803 = (growth_pred_5760 * defunc_1_fn_arg_5799)
-      binop_x_5893 = (growth_pred_tan_5766 * defunc_1_fn_arg_5799)
-      binop_y_5894 = (growth_pred_5760 * defunc_1_fn_arg_tan_5880)
-      x_tan_5892 = (binop_x_5893 + binop_y_5894)
-      x_5804 = (x_5803 - decline_pred_5761)
-      x_tan_5895 = (binop_y_5872 + x_tan_5892)
-      dpred_5805 = (defunc_1_fn_arg_5799 * x_5804)
-      binop_x_5899 = (x_5804 * defunc_1_fn_arg_tan_5880)
-      binop_y_5900 = (defunc_1_fn_arg_5799 * x_tan_5895)
-      dpred_tan_5898 = (binop_x_5899 + binop_y_5900)
-      y_5806 = (x_5771 * dprey_5802)
-      binop_y_5903 = (x_5771 * dprey_tan_5889)
-      defunc_1_fn_arg_5807 = (curr_state_5788 + y_5806)
-      defunc_1_fn_arg_tan_5904 = (curr_state_tan_5854 + binop_y_5903)
-      y_5808 = (predation_5759 * defunc_1_fn_arg_5807)
-      binop_x_5908 = (predation_tan_5765 * defunc_1_fn_arg_5807)
-      binop_y_5909 = (predation_5759 * defunc_1_fn_arg_tan_5904)
-      y_tan_5907 = (binop_x_5908 + binop_y_5909)
-      x_5809 = (growth_prey_5758 - y_5808)
-      binop_y_5912 = (np.float32(-1.0) * y_tan_5907)
-      x_tan_5910 = (growth_prey_tan_5764 + binop_y_5912)
-      dprey_5810 = (defunc_1_fn_arg_5807 * x_5809)
-      binop_x_5914 = (x_5809 * defunc_1_fn_arg_tan_5904)
-      binop_y_5915 = (defunc_1_fn_arg_5807 * x_tan_5910)
-      dprey_tan_5913 = (binop_x_5914 + binop_y_5915)
-      x_5811 = (growth_pred_5760 * defunc_1_fn_arg_5807)
-      binop_x_5917 = (growth_pred_tan_5766 * defunc_1_fn_arg_5807)
-      binop_y_5918 = (growth_pred_5760 * defunc_1_fn_arg_tan_5904)
-      x_tan_5916 = (binop_x_5917 + binop_y_5918)
-      x_5812 = (x_5811 - decline_pred_5761)
-      x_tan_5919 = (binop_y_5872 + x_tan_5916)
-      dpred_5813 = (defunc_1_fn_arg_5807 * x_5812)
-      binop_x_5923 = (x_5812 * defunc_1_fn_arg_tan_5904)
-      binop_y_5924 = (defunc_1_fn_arg_5807 * x_tan_5919)
-      dpred_tan_5922 = (binop_x_5923 + binop_y_5924)
-      y_5814 = (step_sizze_5754 * dprey_5810)
-      binop_y_5928 = (step_sizze_5754 * dprey_tan_5913)
-      defunc_1_fn_arg_5815 = (curr_state_5788 + y_5814)
-      defunc_1_fn_arg_tan_5929 = (curr_state_tan_5854 + binop_y_5928)
-      y_5816 = (predation_5759 * defunc_1_fn_arg_5815)
-      binop_x_5933 = (predation_tan_5765 * defunc_1_fn_arg_5815)
-      binop_y_5934 = (predation_5759 * defunc_1_fn_arg_tan_5929)
-      y_tan_5932 = (binop_x_5933 + binop_y_5934)
-      x_5817 = (growth_prey_5758 - y_5816)
-      binop_y_5937 = (np.float32(-1.0) * y_tan_5932)
-      x_tan_5935 = (growth_prey_tan_5764 + binop_y_5937)
-      dprey_5818 = (defunc_1_fn_arg_5815 * x_5817)
-      binop_x_5939 = (x_5817 * defunc_1_fn_arg_tan_5929)
-      binop_y_5940 = (defunc_1_fn_arg_5815 * x_tan_5935)
-      dprey_tan_5938 = (binop_x_5939 + binop_y_5940)
-      x_5819 = (growth_pred_5760 * defunc_1_fn_arg_5815)
-      binop_x_5942 = (growth_pred_tan_5766 * defunc_1_fn_arg_5815)
-      binop_y_5943 = (growth_pred_5760 * defunc_1_fn_arg_tan_5929)
-      x_tan_5941 = (binop_x_5942 + binop_y_5943)
-      x_5820 = (x_5819 - decline_pred_5761)
-      x_tan_5944 = (binop_y_5872 + x_tan_5941)
-      dpred_5821 = (defunc_1_fn_arg_5815 * x_5820)
-      binop_x_5948 = (x_5820 * defunc_1_fn_arg_tan_5929)
-      binop_y_5949 = (defunc_1_fn_arg_5815 * x_tan_5944)
-      dpred_tan_5947 = (binop_x_5948 + binop_y_5949)
-      y_5822 = (np.float32(2.0) * dprey_5802)
-      binop_y_5952 = (np.float32(2.0) * dprey_tan_5889)
-      x_5823 = (dprey_5794 + y_5822)
-      x_tan_5953 = (dprey_tan_5864 + binop_y_5952)
-      y_5824 = (np.float32(2.0) * dprey_5810)
-      binop_y_5958 = (np.float32(2.0) * dprey_tan_5913)
-      x_5825 = (x_5823 + y_5824)
-      x_tan_5959 = (x_tan_5953 + binop_y_5958)
-      y_5826 = (dprey_5818 + x_5825)
-      y_tan_5962 = (dprey_tan_5938 + x_tan_5959)
-      y_5827 = (x_5772 * y_5826)
-      binop_y_5968 = (x_5772 * y_tan_5962)
-      loopres_5828 = (curr_state_5788 + y_5827)
-      loopres_tan_5969 = (curr_state_tan_5854 + binop_y_5968)
-      y_5829 = (np.float32(2.0) * dpred_5805)
-      binop_y_5974 = (np.float32(2.0) * dpred_tan_5898)
-      x_5830 = (dpred_5797 + y_5829)
-      x_tan_5975 = (dpred_tan_5873 + binop_y_5974)
-      y_5831 = (np.float32(2.0) * dpred_5813)
-      binop_y_5980 = (np.float32(2.0) * dpred_tan_5922)
-      x_5832 = (x_5830 + y_5831)
-      x_tan_5981 = (x_tan_5975 + binop_y_5980)
-      y_5833 = (dpred_5821 + x_5832)
-      y_tan_5984 = (dpred_tan_5947 + x_tan_5981)
-      y_5834 = (x_5772 * y_5833)
-      binop_y_5989 = (x_5772 * y_tan_5984)
-      loopres_5835 = (curr_state_5789 + y_5834)
-      loopres_tan_5990 = (curr_state_tan_5855 + binop_y_5989)
-      writeScalarArray(mem_6000, i_5787, ct.c_float(loopres_tan_5969))
-      writeScalarArray(mem_6002, i_5787, ct.c_float(loopres_tan_5990))
-      curr_state_tmp_6060 = loopres_5828
-      curr_state_tan_tmp_6061 = loopres_tan_5969
-      curr_state_tmp_6062 = loopres_5835
-      curr_state_tan_tmp_6063 = loopres_tan_5990
-      curr_state_5788 = curr_state_tmp_6060
-      curr_state_tan_5854 = curr_state_tan_tmp_6061
-      curr_state_5789 = curr_state_tmp_6062
-      curr_state_tan_5855 = curr_state_tan_tmp_6063
-      i_5787 += one_6080
-    states_5783 = curr_state_5788
-    states_tan_5850 = curr_state_tan_5854
-    states_5784 = curr_state_5789
-    states_tan_5851 = curr_state_tan_5855
-    binop_x_6028 = (np.int64(2) * num_steps_5755)
-    bytes_6027 = (np.int64(4) * binop_x_6028)
-    mem_6029 = allocateMem(bytes_6027)
-    mem_6044 = allocateMem(np.int64(8))
-    i_5997 = np.int64(0)
-    one_6082 = np.int64(1)
-    for counter_6081 in range(num_steps_5755):
-      x_5839 = indexArray(mem_6000, i_5997, ct.c_float, np.float32)
-      x_5840 = indexArray(mem_6002, i_5997, ct.c_float, np.float32)
-      writeScalarArray(mem_6044, np.int64(0), ct.c_float(x_5839))
-      writeScalarArray(mem_6044, np.int64(1), ct.c_float(x_5840))
-      ct.memmove(addressOffset(mem_6029, ((i_5997 * np.int64(2)) * np.int64(4)),
-                               ct.c_byte), addressOffset(mem_6044, np.int64(0),
+    x_5784 = (step_sizze_5767 / np.float32(2.0))
+    x_5785 = (step_sizze_5767 / np.float32(6.0))
+    bytes_6024 = (np.int64(4) * num_steps_5768)
+    mem_6025 = allocateMem(bytes_6024)
+    i_6083 = np.int64(0)
+    one_6101 = np.int64(1)
+    for counter_6100 in range(num_steps_5768):
+      writeScalarArray(mem_6025, i_6083, ct.c_float(init_prey_tan_5775))
+      i_6083 += one_6101
+    mem_6027 = allocateMem(bytes_6024)
+    i_6084 = np.int64(0)
+    one_6103 = np.int64(1)
+    for counter_6102 in range(num_steps_5768):
+      writeScalarArray(mem_6027, i_6084, ct.c_float(init_pred_tan_5776))
+      i_6084 += one_6103
+    binop_y_5888 = (np.float32(-1.0) * decline_pred_tan_5780)
+    curr_state_5801 = init_prey_5769
+    curr_state_tan_5870 = init_prey_tan_5775
+    curr_state_5802 = init_pred_5770
+    curr_state_tan_5871 = init_pred_tan_5776
+    i_5800 = np.int64(0)
+    one_6105 = np.int64(1)
+    for counter_6104 in range(num_steps_5768):
+      y_5805 = (predation_5772 * curr_state_5802)
+      binop_x_5875 = (predation_tan_5778 * curr_state_5802)
+      binop_y_5876 = (predation_5772 * curr_state_tan_5871)
+      y_tan_5874 = (binop_x_5875 + binop_y_5876)
+      x_5806 = (growth_prey_5771 - y_5805)
+      binop_y_5879 = (np.float32(-1.0) * y_tan_5874)
+      x_tan_5877 = (growth_prey_tan_5777 + binop_y_5879)
+      dprey_5807 = (curr_state_5801 * x_5806)
+      binop_x_5881 = (x_5806 * curr_state_tan_5870)
+      binop_y_5882 = (curr_state_5801 * x_tan_5877)
+      dprey_tan_5880 = (binop_x_5881 + binop_y_5882)
+      x_5808 = (growth_pred_5773 * curr_state_5801)
+      binop_x_5884 = (growth_pred_tan_5779 * curr_state_5801)
+      binop_y_5885 = (growth_pred_5773 * curr_state_tan_5870)
+      x_tan_5883 = (binop_x_5884 + binop_y_5885)
+      x_5809 = (x_5808 - decline_pred_5774)
+      x_tan_5886 = (x_tan_5883 + binop_y_5888)
+      dpred_5810 = (curr_state_5802 * x_5809)
+      binop_x_5890 = (x_5809 * curr_state_tan_5871)
+      binop_y_5891 = (curr_state_5802 * x_tan_5886)
+      dpred_tan_5889 = (binop_x_5890 + binop_y_5891)
+      y_5811 = (x_5784 * dprey_5807)
+      binop_y_5895 = (x_5784 * dprey_tan_5880)
+      defunc_1_fn_arg_5812 = (curr_state_5802 + y_5811)
+      defunc_1_fn_arg_tan_5896 = (curr_state_tan_5871 + binop_y_5895)
+      defunc_0_fn_arg_5813 = (curr_state_5801 + y_5811)
+      defunc_0_fn_arg_tan_5899 = (curr_state_tan_5870 + binop_y_5895)
+      y_5814 = (predation_5772 * defunc_1_fn_arg_5812)
+      binop_x_5903 = (predation_tan_5778 * defunc_1_fn_arg_5812)
+      binop_y_5904 = (predation_5772 * defunc_1_fn_arg_tan_5896)
+      y_tan_5902 = (binop_x_5903 + binop_y_5904)
+      x_5815 = (growth_prey_5771 - y_5814)
+      binop_y_5907 = (np.float32(-1.0) * y_tan_5902)
+      x_tan_5905 = (growth_prey_tan_5777 + binop_y_5907)
+      dprey_5816 = (defunc_0_fn_arg_5813 * x_5815)
+      binop_x_5909 = (x_5815 * defunc_0_fn_arg_tan_5899)
+      binop_y_5910 = (defunc_0_fn_arg_5813 * x_tan_5905)
+      dprey_tan_5908 = (binop_x_5909 + binop_y_5910)
+      x_5817 = (growth_pred_5773 * defunc_0_fn_arg_5813)
+      binop_x_5912 = (growth_pred_tan_5779 * defunc_0_fn_arg_5813)
+      binop_y_5913 = (growth_pred_5773 * defunc_0_fn_arg_tan_5899)
+      x_tan_5911 = (binop_x_5912 + binop_y_5913)
+      x_5818 = (x_5817 - decline_pred_5774)
+      x_tan_5914 = (binop_y_5888 + x_tan_5911)
+      dpred_5819 = (defunc_1_fn_arg_5812 * x_5818)
+      binop_x_5918 = (x_5818 * defunc_1_fn_arg_tan_5896)
+      binop_y_5919 = (defunc_1_fn_arg_5812 * x_tan_5914)
+      dpred_tan_5917 = (binop_x_5918 + binop_y_5919)
+      y_5820 = (x_5784 * dprey_5816)
+      binop_y_5922 = (x_5784 * dprey_tan_5908)
+      defunc_1_fn_arg_5821 = (curr_state_5802 + y_5820)
+      defunc_1_fn_arg_tan_5923 = (curr_state_tan_5871 + binop_y_5922)
+      defunc_0_fn_arg_5822 = (curr_state_5801 + y_5820)
+      defunc_0_fn_arg_tan_5926 = (curr_state_tan_5870 + binop_y_5922)
+      y_5823 = (predation_5772 * defunc_1_fn_arg_5821)
+      binop_x_5930 = (predation_tan_5778 * defunc_1_fn_arg_5821)
+      binop_y_5931 = (predation_5772 * defunc_1_fn_arg_tan_5923)
+      y_tan_5929 = (binop_x_5930 + binop_y_5931)
+      x_5824 = (growth_prey_5771 - y_5823)
+      binop_y_5934 = (np.float32(-1.0) * y_tan_5929)
+      x_tan_5932 = (growth_prey_tan_5777 + binop_y_5934)
+      dprey_5825 = (defunc_0_fn_arg_5822 * x_5824)
+      binop_x_5936 = (x_5824 * defunc_0_fn_arg_tan_5926)
+      binop_y_5937 = (defunc_0_fn_arg_5822 * x_tan_5932)
+      dprey_tan_5935 = (binop_x_5936 + binop_y_5937)
+      x_5826 = (growth_pred_5773 * defunc_0_fn_arg_5822)
+      binop_x_5939 = (growth_pred_tan_5779 * defunc_0_fn_arg_5822)
+      binop_y_5940 = (growth_pred_5773 * defunc_0_fn_arg_tan_5926)
+      x_tan_5938 = (binop_x_5939 + binop_y_5940)
+      x_5827 = (x_5826 - decline_pred_5774)
+      x_tan_5941 = (binop_y_5888 + x_tan_5938)
+      dpred_5828 = (defunc_1_fn_arg_5821 * x_5827)
+      binop_x_5945 = (x_5827 * defunc_1_fn_arg_tan_5923)
+      binop_y_5946 = (defunc_1_fn_arg_5821 * x_tan_5941)
+      dpred_tan_5944 = (binop_x_5945 + binop_y_5946)
+      y_5829 = (step_sizze_5767 * dprey_5825)
+      binop_y_5950 = (step_sizze_5767 * dprey_tan_5935)
+      defunc_1_fn_arg_5830 = (curr_state_5802 + y_5829)
+      defunc_1_fn_arg_tan_5951 = (curr_state_tan_5871 + binop_y_5950)
+      defunc_0_fn_arg_5831 = (curr_state_5801 + y_5829)
+      defunc_0_fn_arg_tan_5954 = (curr_state_tan_5870 + binop_y_5950)
+      y_5832 = (predation_5772 * defunc_1_fn_arg_5830)
+      binop_x_5958 = (predation_tan_5778 * defunc_1_fn_arg_5830)
+      binop_y_5959 = (predation_5772 * defunc_1_fn_arg_tan_5951)
+      y_tan_5957 = (binop_x_5958 + binop_y_5959)
+      x_5833 = (growth_prey_5771 - y_5832)
+      binop_y_5962 = (np.float32(-1.0) * y_tan_5957)
+      x_tan_5960 = (growth_prey_tan_5777 + binop_y_5962)
+      dprey_5834 = (defunc_0_fn_arg_5831 * x_5833)
+      binop_x_5964 = (x_5833 * defunc_0_fn_arg_tan_5954)
+      binop_y_5965 = (defunc_0_fn_arg_5831 * x_tan_5960)
+      dprey_tan_5963 = (binop_x_5964 + binop_y_5965)
+      x_5835 = (growth_pred_5773 * defunc_0_fn_arg_5831)
+      binop_x_5967 = (growth_pred_tan_5779 * defunc_0_fn_arg_5831)
+      binop_y_5968 = (growth_pred_5773 * defunc_0_fn_arg_tan_5954)
+      x_tan_5966 = (binop_x_5967 + binop_y_5968)
+      x_5836 = (x_5835 - decline_pred_5774)
+      x_tan_5969 = (binop_y_5888 + x_tan_5966)
+      dpred_5837 = (defunc_1_fn_arg_5830 * x_5836)
+      binop_x_5973 = (x_5836 * defunc_1_fn_arg_tan_5951)
+      binop_y_5974 = (defunc_1_fn_arg_5830 * x_tan_5969)
+      dpred_tan_5972 = (binop_x_5973 + binop_y_5974)
+      y_5838 = (np.float32(2.0) * dprey_5816)
+      binop_y_5977 = (np.float32(2.0) * dprey_tan_5908)
+      x_5839 = (dprey_5807 + y_5838)
+      x_tan_5978 = (dprey_tan_5880 + binop_y_5977)
+      y_5840 = (np.float32(2.0) * dprey_5825)
+      binop_y_5983 = (np.float32(2.0) * dprey_tan_5935)
+      x_5841 = (x_5839 + y_5840)
+      x_tan_5984 = (x_tan_5978 + binop_y_5983)
+      y_5842 = (dprey_5834 + x_5841)
+      y_tan_5987 = (dprey_tan_5963 + x_tan_5984)
+      y_5843 = (x_5785 * y_5842)
+      binop_y_5993 = (x_5785 * y_tan_5987)
+      loopres_5844 = (curr_state_5801 + y_5843)
+      loopres_tan_5994 = (curr_state_tan_5870 + binop_y_5993)
+      y_5845 = (np.float32(2.0) * dpred_5819)
+      binop_y_5999 = (np.float32(2.0) * dpred_tan_5917)
+      x_5846 = (dpred_5810 + y_5845)
+      x_tan_6000 = (dpred_tan_5889 + binop_y_5999)
+      y_5847 = (np.float32(2.0) * dpred_5828)
+      binop_y_6005 = (np.float32(2.0) * dpred_tan_5944)
+      x_5848 = (x_5846 + y_5847)
+      x_tan_6006 = (x_tan_6000 + binop_y_6005)
+      y_5849 = (dpred_5837 + x_5848)
+      y_tan_6009 = (dpred_tan_5972 + x_tan_6006)
+      y_5850 = (x_5785 * y_5849)
+      binop_y_6014 = (x_5785 * y_tan_6009)
+      loopres_5851 = (curr_state_5802 + y_5850)
+      loopres_tan_6015 = (curr_state_tan_5871 + binop_y_6014)
+      writeScalarArray(mem_6025, i_5800, ct.c_float(loopres_tan_5994))
+      writeScalarArray(mem_6027, i_5800, ct.c_float(loopres_tan_6015))
+      curr_state_tmp_6085 = loopres_5844
+      curr_state_tan_tmp_6086 = loopres_tan_5994
+      curr_state_tmp_6087 = loopres_5851
+      curr_state_tan_tmp_6088 = loopres_tan_6015
+      curr_state_5801 = curr_state_tmp_6085
+      curr_state_tan_5870 = curr_state_tan_tmp_6086
+      curr_state_5802 = curr_state_tmp_6087
+      curr_state_tan_5871 = curr_state_tan_tmp_6088
+      i_5800 += one_6105
+    states_5796 = curr_state_5801
+    states_tan_5866 = curr_state_tan_5870
+    states_5797 = curr_state_5802
+    states_tan_5867 = curr_state_tan_5871
+    binop_x_6053 = (np.int64(2) * num_steps_5768)
+    bytes_6052 = (np.int64(4) * binop_x_6053)
+    mem_6054 = allocateMem(bytes_6052)
+    mem_6069 = allocateMem(np.int64(8))
+    i_6022 = np.int64(0)
+    one_6107 = np.int64(1)
+    for counter_6106 in range(num_steps_5768):
+      x_5855 = indexArray(mem_6025, i_6022, ct.c_float, np.float32)
+      x_5856 = indexArray(mem_6027, i_6022, ct.c_float, np.float32)
+      writeScalarArray(mem_6069, np.int64(0), ct.c_float(x_5855))
+      writeScalarArray(mem_6069, np.int64(1), ct.c_float(x_5856))
+      ct.memmove(addressOffset(mem_6054, ((i_6022 * np.int64(2)) * np.int64(4)),
+                               ct.c_byte), addressOffset(mem_6069, np.int64(0),
                                                          ct.c_byte),
                  (np.int64(2) * np.int32(4)))
-      i_5997 += one_6082
-    mem_6000 = None
-    mem_6002 = None
-    mem_6044 = None
-    mem_6055 = allocateMem(bytes_6027)
-    ct.memmove(addressOffset(mem_6055, np.int64(0), ct.c_byte),
-               addressOffset(mem_6029, np.int64(0), ct.c_byte),
-               ((num_steps_5755 * np.int64(2)) * np.int32(4)))
-    mem_6029 = None
-    out_mem_6057 = mem_6055
-    return out_mem_6057
-  def main(self, step_sizze_5680_ext, num_steps_5681_ext, init_prey_5682_ext,
-           init_pred_5683_ext, growth_prey_5684_ext, predation_5685_ext,
-           growth_pred_5686_ext, decline_pred_5687_ext):
+      i_6022 += one_6107
+    mem_6025 = None
+    mem_6027 = None
+    mem_6069 = None
+    mem_6080 = allocateMem(bytes_6052)
+    ct.memmove(addressOffset(mem_6080, np.int64(0), ct.c_byte),
+               addressOffset(mem_6054, np.int64(0), ct.c_byte),
+               ((num_steps_5768 * np.int64(2)) * np.int32(4)))
+    mem_6054 = None
+    out_mem_6082 = mem_6080
+    return out_mem_6082
+  def main(self, step_sizze_5690_ext, num_steps_5691_ext, init_prey_5692_ext,
+           init_pred_5693_ext, growth_prey_5694_ext, predation_5695_ext,
+           growth_pred_5696_ext, decline_pred_5697_ext):
     try:
-      step_sizze_5680 = np.float32(ct.c_float(step_sizze_5680_ext))
+      step_sizze_5690 = np.float32(ct.c_float(step_sizze_5690_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #0 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                            type(step_sizze_5680_ext),
-                                                                                                                            step_sizze_5680_ext))
+                                                                                                                            type(step_sizze_5690_ext),
+                                                                                                                            step_sizze_5690_ext))
     try:
-      num_steps_5681 = np.int64(ct.c_int64(num_steps_5681_ext))
+      num_steps_5691 = np.int64(ct.c_int64(num_steps_5691_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #1 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("i64",
-                                                                                                                            type(num_steps_5681_ext),
-                                                                                                                            num_steps_5681_ext))
+                                                                                                                            type(num_steps_5691_ext),
+                                                                                                                            num_steps_5691_ext))
     try:
-      init_prey_5682 = np.float32(ct.c_float(init_prey_5682_ext))
+      init_prey_5692 = np.float32(ct.c_float(init_prey_5692_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #2 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                            type(init_prey_5682_ext),
-                                                                                                                            init_prey_5682_ext))
+                                                                                                                            type(init_prey_5692_ext),
+                                                                                                                            init_prey_5692_ext))
     try:
-      init_pred_5683 = np.float32(ct.c_float(init_pred_5683_ext))
+      init_pred_5693 = np.float32(ct.c_float(init_pred_5693_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #3 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                            type(init_pred_5683_ext),
-                                                                                                                            init_pred_5683_ext))
+                                                                                                                            type(init_pred_5693_ext),
+                                                                                                                            init_pred_5693_ext))
     try:
-      growth_prey_5684 = np.float32(ct.c_float(growth_prey_5684_ext))
+      growth_prey_5694 = np.float32(ct.c_float(growth_prey_5694_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #4 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                            type(growth_prey_5684_ext),
-                                                                                                                            growth_prey_5684_ext))
+                                                                                                                            type(growth_prey_5694_ext),
+                                                                                                                            growth_prey_5694_ext))
     try:
-      predation_5685 = np.float32(ct.c_float(predation_5685_ext))
+      predation_5695 = np.float32(ct.c_float(predation_5695_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #5 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                            type(predation_5685_ext),
-                                                                                                                            predation_5685_ext))
+                                                                                                                            type(predation_5695_ext),
+                                                                                                                            predation_5695_ext))
     try:
-      growth_pred_5686 = np.float32(ct.c_float(growth_pred_5686_ext))
+      growth_pred_5696 = np.float32(ct.c_float(growth_pred_5696_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #6 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                            type(growth_pred_5686_ext),
-                                                                                                                            growth_pred_5686_ext))
+                                                                                                                            type(growth_pred_5696_ext),
+                                                                                                                            growth_pred_5696_ext))
     try:
-      decline_pred_5687 = np.float32(ct.c_float(decline_pred_5687_ext))
+      decline_pred_5697 = np.float32(ct.c_float(decline_pred_5697_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #7 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                            type(decline_pred_5687_ext),
-                                                                                                                            decline_pred_5687_ext))
+                                                                                                                            type(decline_pred_5697_ext),
+                                                                                                                            decline_pred_5697_ext))
     time_start = time.time()
     with np.errstate(divide="ignore", over="ignore", under="ignore",
                      invalid="ignore"):
-      out_mem_6057 = self.futhark_main(step_sizze_5680, num_steps_5681,
-                                       init_prey_5682, init_pred_5683,
-                                       growth_prey_5684, predation_5685,
-                                       growth_pred_5686, decline_pred_5687)
+      out_mem_6082 = self.futhark_main(step_sizze_5690, num_steps_5691,
+                                       init_prey_5692, init_pred_5693,
+                                       growth_prey_5694, predation_5695,
+                                       growth_pred_5696, decline_pred_5697)
     runtime = (int((time.time() * 1000000)) - int((time_start * 1000000)))
-    return createArray(ct.cast(out_mem_6057, ct.POINTER(ct.c_float)),
-                       (num_steps_5681, np.int64(2)))
-  def runge_kutta_fwd(self, step_sizze_5754_ext, num_steps_5755_ext,
-                      init_prey_5756_ext, init_pred_5757_ext,
-                      growth_prey_5758_ext, predation_5759_ext,
-                      growth_pred_5760_ext, decline_pred_5761_ext,
-                      init_prey_tan_5762_ext, init_pred_tan_5763_ext,
-                      growth_prey_tan_5764_ext, predation_tan_5765_ext,
-                      growth_pred_tan_5766_ext, decline_pred_tan_5767_ext):
+    return createArray(ct.cast(out_mem_6082, ct.POINTER(ct.c_float)),
+                       (num_steps_5691, np.int64(2)))
+  def runge_kutta_fwd(self, step_sizze_5767_ext, num_steps_5768_ext,
+                      init_prey_5769_ext, init_pred_5770_ext,
+                      growth_prey_5771_ext, predation_5772_ext,
+                      growth_pred_5773_ext, decline_pred_5774_ext,
+                      init_prey_tan_5775_ext, init_pred_tan_5776_ext,
+                      growth_prey_tan_5777_ext, predation_tan_5778_ext,
+                      growth_pred_tan_5779_ext, decline_pred_tan_5780_ext):
     try:
-      step_sizze_5754 = np.float32(ct.c_float(step_sizze_5754_ext))
+      step_sizze_5767 = np.float32(ct.c_float(step_sizze_5767_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #0 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                            type(step_sizze_5754_ext),
-                                                                                                                            step_sizze_5754_ext))
+                                                                                                                            type(step_sizze_5767_ext),
+                                                                                                                            step_sizze_5767_ext))
     try:
-      num_steps_5755 = np.int64(ct.c_int64(num_steps_5755_ext))
+      num_steps_5768 = np.int64(ct.c_int64(num_steps_5768_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #1 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("i64",
-                                                                                                                            type(num_steps_5755_ext),
-                                                                                                                            num_steps_5755_ext))
+                                                                                                                            type(num_steps_5768_ext),
+                                                                                                                            num_steps_5768_ext))
     try:
-      init_prey_5756 = np.float32(ct.c_float(init_prey_5756_ext))
+      init_prey_5769 = np.float32(ct.c_float(init_prey_5769_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #2 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                            type(init_prey_5756_ext),
-                                                                                                                            init_prey_5756_ext))
+                                                                                                                            type(init_prey_5769_ext),
+                                                                                                                            init_prey_5769_ext))
     try:
-      init_pred_5757 = np.float32(ct.c_float(init_pred_5757_ext))
+      init_pred_5770 = np.float32(ct.c_float(init_pred_5770_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #3 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                            type(init_pred_5757_ext),
-                                                                                                                            init_pred_5757_ext))
+                                                                                                                            type(init_pred_5770_ext),
+                                                                                                                            init_pred_5770_ext))
     try:
-      growth_prey_5758 = np.float32(ct.c_float(growth_prey_5758_ext))
+      growth_prey_5771 = np.float32(ct.c_float(growth_prey_5771_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #4 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                            type(growth_prey_5758_ext),
-                                                                                                                            growth_prey_5758_ext))
+                                                                                                                            type(growth_prey_5771_ext),
+                                                                                                                            growth_prey_5771_ext))
     try:
-      predation_5759 = np.float32(ct.c_float(predation_5759_ext))
+      predation_5772 = np.float32(ct.c_float(predation_5772_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #5 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                            type(predation_5759_ext),
-                                                                                                                            predation_5759_ext))
+                                                                                                                            type(predation_5772_ext),
+                                                                                                                            predation_5772_ext))
     try:
-      growth_pred_5760 = np.float32(ct.c_float(growth_pred_5760_ext))
+      growth_pred_5773 = np.float32(ct.c_float(growth_pred_5773_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #6 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                            type(growth_pred_5760_ext),
-                                                                                                                            growth_pred_5760_ext))
+                                                                                                                            type(growth_pred_5773_ext),
+                                                                                                                            growth_pred_5773_ext))
     try:
-      decline_pred_5761 = np.float32(ct.c_float(decline_pred_5761_ext))
+      decline_pred_5774 = np.float32(ct.c_float(decline_pred_5774_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #7 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                            type(decline_pred_5761_ext),
-                                                                                                                            decline_pred_5761_ext))
+                                                                                                                            type(decline_pred_5774_ext),
+                                                                                                                            decline_pred_5774_ext))
     try:
-      init_prey_tan_5762 = np.float32(ct.c_float(init_prey_tan_5762_ext))
+      init_prey_tan_5775 = np.float32(ct.c_float(init_prey_tan_5775_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #8 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                            type(init_prey_tan_5762_ext),
-                                                                                                                            init_prey_tan_5762_ext))
+                                                                                                                            type(init_prey_tan_5775_ext),
+                                                                                                                            init_prey_tan_5775_ext))
     try:
-      init_pred_tan_5763 = np.float32(ct.c_float(init_pred_tan_5763_ext))
+      init_pred_tan_5776 = np.float32(ct.c_float(init_pred_tan_5776_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #9 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                            type(init_pred_tan_5763_ext),
-                                                                                                                            init_pred_tan_5763_ext))
+                                                                                                                            type(init_pred_tan_5776_ext),
+                                                                                                                            init_pred_tan_5776_ext))
     try:
-      growth_prey_tan_5764 = np.float32(ct.c_float(growth_prey_tan_5764_ext))
+      growth_prey_tan_5777 = np.float32(ct.c_float(growth_prey_tan_5777_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #10 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                             type(growth_prey_tan_5764_ext),
-                                                                                                                             growth_prey_tan_5764_ext))
+                                                                                                                             type(growth_prey_tan_5777_ext),
+                                                                                                                             growth_prey_tan_5777_ext))
     try:
-      predation_tan_5765 = np.float32(ct.c_float(predation_tan_5765_ext))
+      predation_tan_5778 = np.float32(ct.c_float(predation_tan_5778_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #11 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                             type(predation_tan_5765_ext),
-                                                                                                                             predation_tan_5765_ext))
+                                                                                                                             type(predation_tan_5778_ext),
+                                                                                                                             predation_tan_5778_ext))
     try:
-      growth_pred_tan_5766 = np.float32(ct.c_float(growth_pred_tan_5766_ext))
+      growth_pred_tan_5779 = np.float32(ct.c_float(growth_pred_tan_5779_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #12 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                             type(growth_pred_tan_5766_ext),
-                                                                                                                             growth_pred_tan_5766_ext))
+                                                                                                                             type(growth_pred_tan_5779_ext),
+                                                                                                                             growth_pred_tan_5779_ext))
     try:
-      decline_pred_tan_5767 = np.float32(ct.c_float(decline_pred_tan_5767_ext))
+      decline_pred_tan_5780 = np.float32(ct.c_float(decline_pred_tan_5780_ext))
     except (TypeError, AssertionError) as e:
       raise TypeError("Argument #13 has invalid value\nFuthark type: {}\nArgument has Python type {} and value: {}\n".format("f32",
-                                                                                                                             type(decline_pred_tan_5767_ext),
-                                                                                                                             decline_pred_tan_5767_ext))
+                                                                                                                             type(decline_pred_tan_5780_ext),
+                                                                                                                             decline_pred_tan_5780_ext))
     time_start = time.time()
     with np.errstate(divide="ignore", over="ignore", under="ignore",
                      invalid="ignore"):
-      out_mem_6057 = self.futhark_runge_kutta_fwd(step_sizze_5754,
-                                                  num_steps_5755,
-                                                  init_prey_5756,
-                                                  init_pred_5757,
-                                                  growth_prey_5758,
-                                                  predation_5759,
-                                                  growth_pred_5760,
-                                                  decline_pred_5761,
-                                                  init_prey_tan_5762,
-                                                  init_pred_tan_5763,
-                                                  growth_prey_tan_5764,
-                                                  predation_tan_5765,
-                                                  growth_pred_tan_5766,
-                                                  decline_pred_tan_5767)
+      out_mem_6082 = self.futhark_runge_kutta_fwd(step_sizze_5767,
+                                                  num_steps_5768,
+                                                  init_prey_5769,
+                                                  init_pred_5770,
+                                                  growth_prey_5771,
+                                                  predation_5772,
+                                                  growth_pred_5773,
+                                                  decline_pred_5774,
+                                                  init_prey_tan_5775,
+                                                  init_pred_tan_5776,
+                                                  growth_prey_tan_5777,
+                                                  predation_tan_5778,
+                                                  growth_pred_tan_5779,
+                                                  decline_pred_tan_5780)
     runtime = (int((time.time() * 1000000)) - int((time_start * 1000000)))
-    return createArray(ct.cast(out_mem_6057, ct.POINTER(ct.c_float)),
-                       (num_steps_5755, np.int64(2)))
+    return createArray(ct.cast(out_mem_6082, ct.POINTER(ct.c_float)),
+                       (num_steps_5768, np.int64(2)))

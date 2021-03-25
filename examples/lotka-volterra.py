@@ -1,19 +1,21 @@
 from functools import partial
+from time import time
 from typing import Tuple
 
 import matplotlib.pyplot as plt
 import torch
-from torch import Tensor
+from torch import tensor
 
-from lotka_volterra_func import run_lv
-from pyro import sample, plate, param
-from pyro.distributions.constraints import positive
+from lotka_volterra_func_ocl import run_lv
+from pyro import sample, plate
 from pyro.distributions import HalfNormal, Normal
 from pyro.infer import SVI, Trace_ELBO
 from pyro.infer.autoguide import AutoDelta
 from pyro.optim import ClippedAdam
 
 NOISE_SCALE = .3
+
+print(torch.cuda.is_available())
 
 
 def euler_method(fn, step_size, num_steps, state,
@@ -29,9 +31,8 @@ def euler_method(fn, step_size, num_steps, state,
     return res
 
 
-def runge_kutta(fn, step_size, num_steps, init_state, **kwargs):
-    current_state = init_state
-    args = kwargs.values()
+def runge_kutta(fn, step_size, num_steps, init_prey, init_predator, *args):
+    current_state = torch.stack((init_prey, init_predator), dim=-1)
     accum = torch.empty((num_steps, *current_state.shape))
 
     for i in range(num_steps):
@@ -42,9 +43,6 @@ def runge_kutta(fn, step_size, num_steps, init_state, **kwargs):
         current_state = current_state + step_size / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
         accum[i] = current_state
     return accum
-
-
-
 
 
 def lv_step(state: Tuple[float, float],  # prey, predator
@@ -65,7 +63,7 @@ def lv_step(state: Tuple[float, float],  # prey, predator
     return torch.stack((dprey, dpredator), dim=-1)
 
 
-def model(times, obs, step_size=.3, num_steps=300):
+def model(times, obs, step_size=torch.tensor([.3]), num_steps=torch.tensor([300], dtype=torch.int64)):
     n, _, _ = obs.shape
     prior_dist = HalfNormal(2.)
 
@@ -77,14 +75,14 @@ def model(times, obs, step_size=.3, num_steps=300):
     predator_growth_rate = sample('predator_growth_rate', prior_dist)
     predator_decline_rate = sample('predator_decline_rate', prior_dist)
 
-    pp_res = run_lv(  # Futhark
+    pp_res = run_lv(
         step_size, num_steps,
-        prey_init=prey_init,
-        predator_init=predator_init,
-        growth_prey=prey_growth_rate,
-        predation=predation_rate,
-        growth_predator=predator_growth_rate,
-        decline_predator=predator_decline_rate
+        prey_init,
+        predator_init,
+        prey_growth_rate,
+        predation_rate,
+        predator_growth_rate,
+        predator_decline_rate
     )
     with plate('obs_plate', n, dim=-3):
         sample('obs', Normal(pp_res[times][None, :, :], NOISE_SCALE), obs=obs)
@@ -92,6 +90,8 @@ def model(times, obs, step_size=.3, num_steps=300):
 
 if __name__ == '__main__':
     system = dict(
+        step_size=.1,
+        num_step=300,
         init_prey=1.,
         init_predator=1.,  # prey, predator
         growth_prey=.45,
@@ -99,22 +99,28 @@ if __name__ == '__main__':
         growth_predator=.1,
         decline_predator=.2
     )
+    torch.manual_seed(37)
+    if torch.cuda.is_available():
+        dev = "cuda:0"
+    else:
+        dev = "cpu"
+    device = torch.device(dev)
 
-    steps = 100
+    steps = 1000
 
-    system = {k: Tensor(v) if isinstance(v, tuple) else Tensor([v]) for k, v in system.items()}
+    system = {k: tensor(v) if k != 'num_steps' else tensor(v, dtype=torch.int64) for k, v in system.items()}
 
-    pp_res = torch.tensor(run_lv(.3, 300, *system.values()))
-    obs_times = Tensor([28, 78, 128, 173, 228, 278]).type(torch.long)
+    pp_res = torch.tensor(run_lv(*system.values()))
+    obs_times = tensor([28, 78, 128, 173, 228, 278], dtype=torch.long)
     obs = pp_res[obs_times]
     data = (obs_times, obs + Normal(0, NOISE_SCALE, ).sample((1000, *obs.shape,)))
 
     plt.plot(pp_res[:, 0], label='prey')
     plt.plot(pp_res[:, 1], '--', label='predator')
-    # plt.scatter(obs_times.repeat(1000, 1).T, torch.transpose(data[1][..., 0], 0, 1), color='blue', alpha=.01)
-    # plt.scatter(obs_times.repeat(1000, 1).T, torch.transpose(data[1][..., 1], 0, 1), color='orange', alpha=.01)
-    # plt.scatter(obs_times, obs[:, 0], marker='x', color='black', label='obs prey')
-    # plt.scatter(obs_times, obs[:, 1], marker='o', color='black', label='obs predator')
+    plt.scatter(obs_times.repeat(1000, 1).T, torch.transpose(data[1][..., 0], 0, 1), color='blue', alpha=.01)
+    plt.scatter(obs_times.repeat(1000, 1).T, torch.transpose(data[1][..., 1], 0, 1), color='orange', alpha=.01)
+    plt.scatter(obs_times, obs[:, 0], marker='x', color='black', label='obs prey')
+    plt.scatter(obs_times, obs[:, 1], marker='o', color='black', label='obs predator')
     plt.xlabel('Time')
     plt.ylabel('Population')
     plt.legend()
@@ -133,13 +139,17 @@ if __name__ == '__main__':
     plt.xlabel('x')
     plt.show()
 
-    guide = AutoDelta(model, )
+    for v in data:
+        v.to(dev)
+
+    guide = AutoDelta(model)
     svi = SVI(model, guide, ClippedAdam({'lr': 1e-4}), Trace_ELBO())
     losses = []
+    start = time()
     for step in range(steps):
         loss = svi.step(*data)
         losses.append(loss)
-
+    print(f'Time take: {time() - start}')
     plt.plot(losses)
     plt.title('Losses')
     plt.ylabel('Loss')

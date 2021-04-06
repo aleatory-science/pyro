@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import torch
 from torch import tensor
 
-from lotka_volterra_func_ocl import run_lv
+from examples.lv_extension.lotka_volterra_func_ocl import run_lv
 from pyro import sample, plate
 from pyro.distributions import HalfNormal, Normal
 from pyro.infer import SVI, Trace_ELBO

@@ -148,7 +148,7 @@ class SineBivariateVonMises(TorchDistribution):
             conc = torch.hstack((self.phi_concentration, self.psi_concentration))
             m = torch.arange(50, device=self.phi_loc.device)
             fs = SineBivariateVonMises._lbinoms(m.max() + 1) + 2 * m * torch.log(corr) - m * torch.log(
-                4 * torch.prod(conc, dim=0))
+                4 * torch.prod(conc, dim=-1))
             fs += torch.sum(log_I1(m.max(), conc), dim=-1)
             mfs = fs.max()
             self._norm_const = 2 * torch.log(torch.tensor(2 * pi)) + mfs + (fs - mfs).logsumexp(-1)

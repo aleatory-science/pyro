@@ -33,14 +33,13 @@ def model(obs, num_mix_comp=25):
         for i in range(2):
             skewness[..., i] = pyro.sample(f'skew{i}', Uniform(0., 1 - tots))
             tots += skewness[..., i]
-        sign = pyro.sample('sign', Uniform(0., torch.ones(skewness.shape)).to_event(len(skewness.shape)))
+        sign = pyro.sample('sign', Uniform(0., torch.ones((2,))).to_event(1))
         skewness = torch.where(sign < .5, -skewness, skewness)
 
     with pyro.plate('data', obs.size(-2)):
-        assign = pyro.sample('mix_comp', Categorical(mix_weights))
+        assign = pyro.sample('mix_comp', Categorical(mix_weights), )
         bvm = SineBivariateVonMises(phi_loc=phi_loc[assign], psi_loc=psi_loc[assign],
-                                    phi_concentration=phi_conc[assign],
-                                    psi_concentration=psi_conc[assign],
+                                    phi_concentration=phi_conc[assign], psi_concentration=psi_conc[assign],
                                     weighted_correlation=corr_scale[assign])
         pyro.sample('obs', SineSkewed(bvm, skewness[assign]), obs=obs)
 

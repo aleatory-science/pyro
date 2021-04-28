@@ -1,7 +1,6 @@
 import pickle
 
 import torch
-from pyro.distributions import HalfNormal, VonMises
 import matplotlib.pyplot as plt
 
 import pyro
@@ -9,6 +8,8 @@ from pyro.distributions import (
     Beta,
     Categorical,
     Gamma,
+    HalfNormal,
+    VonMises,
     SineBivariateVonMises,
     SineSkewed,
     Uniform,
@@ -17,7 +18,8 @@ from pyro.infer import MCMC, NUTS
 
 
 def model(obs, num_mix_comp=25):
-    mix_weight_vals = pyro.sample('mix_weight_vals', Gamma(1. / num_mix_comp, 1.).expand((num_mix_comp,)))  # BDA p. 536
+    mix_weight_vals = pyro.sample('mix_weight_vals',  # BDA p. 536
+                                  Gamma(torch.ones((num_mix_comp,)) / num_mix_comp, 1.))
     mix_weights = mix_weight_vals / mix_weight_vals.sum()
     with pyro.plate('mixture', num_mix_comp):
         # BvM priors
@@ -66,7 +68,7 @@ def main(show_viz=False):
 
     kernel = NUTS(model)
     mcmc = MCMC(kernel, 1, 0)
-    mcmc.run(data[:10])
+    mcmc.run(data)
 
 
 def make_toy():

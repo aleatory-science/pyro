@@ -1,47 +1,79 @@
-import matplotlib.pyplot as plt
+import pickle
+
 import torch
-from torch.distributions import VonMises, HalfNormal
+from pyro.distributions import HalfNormal, VonMises
+import matplotlib.pyplot as plt
 
 import pyro
-from pyro.distributions import Beta, Uniform, Dirichlet, Categorical
-from pyro.distributions.bivariate_von_mises import SineBivariateVonMises, SineSkewed
-from pyro.infer import SVI, Trace_ELBO
-from pyro.infer.autoguide import AutoDelta
+from pyro.distributions import (
+    Beta,
+    Categorical,
+    Gamma,
+    SineBivariateVonMises,
+    SineSkewed,
+    Uniform,
+)
+from pyro.infer import MCMC, NUTS
 
 
-def model(obs, num_mix_comp=10):
-    mix_weights = pyro.sample('mix_weights', Dirichlet(.5 * torch.ones(num_mix_comp)))
+def model(obs, num_mix_comp=25):
+    mix_weight_vals = pyro.sample('mix_weight_vals', Gamma(1. / num_mix_comp, 1.).expand((num_mix_comp,)))  # BDA p. 536
+    mix_weights = mix_weight_vals / mix_weight_vals.sum()
     with pyro.plate('mixture', num_mix_comp):
-        locs = pyro.sample('locs', VonMises(0., 2 * torch.ones(2)))
+        # BvM priors
+        phi_loc = pyro.sample('phi_loc', VonMises(0., 1.))
+        psi_loc = pyro.sample('psi_loc', VonMises(0., 1.))
+        phi_conc = pyro.sample('phi_conc', HalfNormal(2.))
+        psi_conc = pyro.sample('psi_conc', HalfNormal(2.))
         corr_scale = pyro.sample('corr', Beta(2., 2.))
-        conc = pyro.sample('conc', HalfNormal(1.))
-        skewness_val = pyro.sample('skewness_val', Uniform(-torch.ones(2), torch.ones(2)))
-        skewness_scale = pyro.sample('skewness_scale', Beta(2., 2.))
-        skewness = pyro.deterministic('skewness', skewness_scale * skewness_val / skewness_val.abs().sum())
+
+        # SS prior
+        skewness = torch.empty((num_mix_comp, 2)).view(-1, 2)
+        tots = torch.zeros(num_mix_comp).view(-1)
+        for i in range(2):
+            skewness[..., i] = pyro.sample(f'skew{i}', Uniform(0., 1 - tots))
+            tots += skewness[..., i]
+        sign = pyro.sample('sign', Uniform(0., torch.ones(skewness.shape)).to_event(len(skewness.shape)))
+        skewness = torch.where(sign < .5, -skewness, skewness)
+
     with pyro.plate('obs', obs.size(-2)):
         assign = pyro.sample('mix_comp', Categorical(mix_weights))
-        bvm = SineBivariateVonMises(phi_loc=locs[assign, 0], psi_loc=locs[assign, 1],
-                                    phi_concentration=conc[assign, 0], psi_concentration=conc[assign, 1],
+        bvm = SineBivariateVonMises(phi_loc=phi_loc[assign], psi_loc=psi_loc[assign],
+                                    phi_concentration=phi_conc[assign],
+                                    psi_concentration=psi_conc[assign],
                                     weighted_correlation=corr_scale[assign])
         pyro.sample('obs', SineSkewed(bvm, skewness[assign]), obs=obs)
 
 
-def fetch_data():
-    pass
+def fetch_dihedrals(split='train'):
+    # format one_hot(aa) + phi_angle + psi_angle
+    data = pickle.load(open('data/9mer_fragments_processed.pkl', 'rb'))[split]['sequences'][..., -2:]
+    return torch.tensor(data).view(-1, 2)
 
 
-def main():
-    pyro.clear_param_store()
-    adam = pyro.optim.Adam({"lr": .01})
-    svi = SVI(model, AutoDelta(model), adam, loss=Trace_ELBO())
-    data = fetch_data()
+def fetch_toy_dihedrals(split='train'):
+    # only 5 examples
+    data = pickle.load(open('data/9mer_fragments_processed_toy.pkl', 'rb'))[split]['sequences'][..., -2:]
+    return torch.tensor(data).view(-1, 2)
 
-    losses = []
-    for step in range(1000):
-        losses.append(svi.step(data))
 
-    plt.plot(losses)
-    plt.show()
+def main(show_viz=False):
+    data = fetch_toy_dihedrals()
+
+    if show_viz:
+        plt.scatter(*data.T, alpha=.01, s=20)
+        plt.show()
+        plt.clf()
+
+    kernel = NUTS(model)
+    mcmc = MCMC(kernel, 1, 0)
+    mcmc.run(data[:10])
+
+
+def make_toy():
+    data = pickle.load(open('data/9mer_fragments_processed.pkl', 'rb'))
+    toy_data = {k: {kk: vv[:5] for kk, vv in v.items()} for k, v in data.items()}
+    pickle.dump(toy_data, open('data/9mer_fragments_processed_toy.pkl', 'wb'))
 
 
 if __name__ == '__main__':

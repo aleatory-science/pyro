@@ -2,10 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import pyro.distributions.torch_patch  # noqa F403
-from pyro.distributions.torch import *  # noqa F403
-
-# isort: split
-
 from pyro.distributions.affine_beta import AffineBeta
 from pyro.distributions.avf_mvn import AVFMultivariateNormal
 from pyro.distributions.coalescent import (
@@ -58,10 +54,11 @@ from pyro.distributions.relaxed_straight_through import (
     RelaxedBernoulliStraightThrough,
     RelaxedOneHotCategoricalStraightThrough,
 )
-from pyro.distributions.sine_bivariate_von_mises import SineBivariateVonMises
+from pyro.distributions.sine_skewed import SineSkewed
 from pyro.distributions.softlaplace import SoftLaplace
 from pyro.distributions.spanning_tree import SpanningTree
 from pyro.distributions.stable import Stable
+from pyro.distributions.torch import *  # noqa F403
 from pyro.distributions.torch import __all__ as torch_dists
 from pyro.distributions.torch_distribution import (
     ExpandedDistribution,
@@ -83,6 +80,8 @@ from pyro.distributions.zero_inflated import (
 )
 
 from . import constraints, kl, transforms
+
+# isort: split
 
 __all__ = [
     "AffineBeta",
@@ -129,7 +128,7 @@ __all__ = [
     "Rejector",
     "RelaxedBernoulliStraightThrough",
     "RelaxedOneHotCategoricalStraightThrough",
-    "SineBivariateVonMises",
+    "SineSkewed",
     "SoftLaplace",
     "SpanningTree",
     "Stable",

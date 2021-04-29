@@ -49,7 +49,7 @@ def test_ss_sample(dist):
 
     def model(data, batch_shape, event_shape):
         n = torch.prod(torch.tensor(event_shape), -1, dtype=torch.int)
-        skewness = torch.empty((*batch_shape, n)).view(-1, n)
+        skewness = torch.empty(batch_shape + (n,)).view(-1, n)
         tots = torch.zeros(batch_shape).view(-1)
         for i in range(n):
             skewness[..., i] = pyro.sample(f'skew{i}', Uniform(0., 1 - tots))

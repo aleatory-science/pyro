@@ -66,8 +66,10 @@ class SineSkewed(TorchDistribution):
     def sample(self, sample_shape=torch.Size()):
         bd = self.base_density
         ys = bd.sample(sample_shape)
-        mask = Uniform(0, 1.).sample(sample_shape) < 1. + (self.skewness * torch.sin((ys - bd.mean) % (2 * pi))).sum(-1)
-        return torch.where(mask.view(*sample_shape, *(1 for _ in bd.event_shape)), ys, -ys + 2 * bd.mean)
+        u = Uniform(0, 1.).sample(sample_shape+self.batch_shape)
+        mask = u < 1. + (self.skewness * torch.sin((ys - bd.mean) % (2 * pi))).sum(-1)
+        mask = mask.view(*sample_shape, *self.batch_shape, *(1 for _ in bd.event_shape))
+        return torch.where(mask, ys, -ys + 2 * bd.mean)
 
     def log_prob(self, value):
         if self._validate_args:

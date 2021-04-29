@@ -1,13 +1,16 @@
 import pickle
+from functools import partial
 
 import torch
 import matplotlib.pyplot as plt
 from torch import no_grad
 
 import pyro
+from pyro import poutine
 from pyro.distributions import (
     Beta,
     Categorical,
+    Normal,
     HalfNormal,
     VonMises,
     SineBivariateVonMises,
@@ -18,7 +21,7 @@ from pyro.infer import MCMC, NUTS, config_enumerate, Predictive
 
 
 @config_enumerate
-def model(angles, num_mix_comp=15):
+def model(num_mix_comp=15):
     mix_weights = pyro.sample('mix_weights', Dirichlet(torch.ones((num_mix_comp,))))
 
     with pyro.plate('mixture', num_mix_comp):
@@ -40,12 +43,30 @@ def model(angles, num_mix_comp=15):
 
         assert skewness.shape == (num_mix_comp, 2)
 
-    with pyro.plate('data', angles.size(-2)):
+    with pyro.plate('obs_plate'):
         assign = pyro.sample('mix_comp', Categorical(mix_weights), )
         bvm = SineBivariateVonMises(phi_loc=phi_loc[assign], psi_loc=psi_loc[assign],
                                     phi_concentration=phi_conc[assign], psi_concentration=psi_conc[assign],
                                     weighted_correlation=corr_scale[assign])
-        pyro.sample('phi_psi', SineSkewed(bvm, skewness[assign]), obs=angles)
+        return pyro.sample('phi_psi', SineSkewed(bvm, skewness[assign]))
+
+
+def cmodel(angles, num_mix_comp=15):
+    poutine.condition(model, data={'phi_psi': angles})(num_mix_comp)
+
+
+def dummy_model(num_mix_comp=2):
+    mix_weights = pyro.sample('mix_weights', Dirichlet(torch.ones((num_mix_comp,))))
+    with pyro.plate('mixture', num_mix_comp):
+        scale = pyro.sample('scale', HalfNormal(1.).expand((2,)).to_event(1))
+        locs = pyro.sample('locs', Normal(0., 1.).expand((2,)).to_event(1))
+    with pyro.plate('data'):
+        assign = pyro.sample('mix_comp', Categorical(mix_weights))
+        pyro.sample('phi_psi', Normal(locs[assign], scale[assign]).to_event(1))
+
+
+def cdummy_model(angles, num_mix_comp=5):
+    poutine.condition(dummy_model, data={'phi_psi': angles})(num_mix_comp)
 
 
 def fetch_dihedrals(split='train', subsample_to=50_000):
@@ -64,30 +85,35 @@ def fetch_toy_dihedrals(split='train', *args, **kwargs):
     return torch.tensor(data).view(-1, 2).type(torch.float)
 
 
-def main(num_samples=4, show_viz=False):
+def main(num_samples=10, show_viz=False):
     data = fetch_toy_dihedrals(subsample_to=1000)
 
     if show_viz:
         ramachandran_plot(data)
-        plt.show()
 
-    kernel = NUTS(model)
-    mcmc = MCMC(kernel, num_samples, 0)
+    kernel = NUTS(cdummy_model)
+    mcmc = MCMC(kernel, num_samples)
     mcmc.run(data)
     if show_viz:
         mcmc.summary()
     post_samples = mcmc.get_samples()
 
-    predictive = Predictive(model_pred, post_samples, num_samples=num_samples)
+    predictive = Predictive(dummy_model, post_samples, return_sites=('phi_psi',))
+
     pred_data = predictive()
 
     if show_viz:
-        ramachandran_plot(pred_data['phi_psi'], 'pred')
+        ramachandran_plot(pred_data['phi_psi'], 'pred', color='orange')
+    for _ in range(10):
+        pred_data = predictive()
+
+        if show_viz:
+            ramachandran_plot(pred_data['phi_psi'], None, color='orange')
     plt.show()
 
 
-def ramachandran_plot(data, label='ground_truth'):
-    plt.scatter(*data.T, alpha=.5, s=20, label=label)
+def ramachandran_plot(data, label='ground_truth', color='blue'):
+    plt.scatter(*data.T, alpha=.5, s=20, label=label, color=color)
     plt.legend()
 
 
@@ -98,4 +124,4 @@ def make_toy():
 
 
 if __name__ == '__main__':
-    main(show_viz=False)
+    main(show_viz=True)

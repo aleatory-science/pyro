@@ -1,5 +1,6 @@
 import pickle
 from functools import partial
+from pathlib import Path
 
 import torch
 import matplotlib.pyplot as plt
@@ -88,36 +89,35 @@ def fetch_toy_dihedrals(split='train', *args, **kwargs):
 def main(num_samples=10, show_viz=False):
     data = fetch_toy_dihedrals(subsample_to=1000)
 
-    if show_viz:
-        ramachandran_plot(data)
-
-    kernel = NUTS(cdummy_model)
+    kernel = NUTS(cmodel)
     mcmc = MCMC(kernel, num_samples)
     mcmc.run(data)
     if show_viz:
         mcmc.summary()
     post_samples = mcmc.get_samples()
 
-    predictive = Predictive(dummy_model, post_samples, return_sites=('phi_psi',))
+    predictive = Predictive(model, post_samples, return_sites=('phi_psi',))
 
-    pred_data = predictive()
+    pred_data = torch.hstack([predictive()['phi_psi'] for _ in range(10)])
 
     if show_viz:
-        ramachandran_plot(pred_data['phi_psi'], 'pred', color='orange')
-    for _ in range(10):
-        pred_data = predictive()
-
-        if show_viz:
-            ramachandran_plot(pred_data['phi_psi'], None, color='orange')
-    plt.show()
+        ramachandran_plot(data, pred_data, file_name=None)
 
 
-def ramachandran_plot(data, label='ground_truth', color='blue'):
-    plt.scatter(*data.T, alpha=.5, s=20, label=label, color=color)
+def ramachandran_plot(obs, pred, file_name='rama.png'):
+    plt.scatter(*obs.T, alpha=.5, s=20, label='ground_truth', color='blue')
+    plt.scatter(*pred.T, alpha=.5, s=20, label='pred', color='orange')
     plt.xlabel('phi')
     plt.ylabel('psi')
     plt.title('Ramachandran plot')
     plt.legend()
+    if file_name:
+        viz_dir = Path(__file__).parent.parent / 'viz'
+        viz_dir.mkdir(exist_ok=True)
+        plt.savefig(str(viz_dir / file_name))
+    else:
+        plt.show()
+    plt.clf()
 
 
 def make_toy():
@@ -127,4 +127,4 @@ def make_toy():
 
 
 if __name__ == '__main__':
-    main(show_viz=True)
+    main(show_viz=False)

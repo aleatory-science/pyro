@@ -6,6 +6,7 @@ import torch
 from scipy.special import binom, iv
 from torch import tensor
 from torch.distributions import Beta, HalfNormal, VonMises
+import matplotlib.pyplot as plt
 
 import pyro
 from pyro.distributions import Geometric, constraints
@@ -111,14 +112,14 @@ def test_mle_bvm():
         pass
 
     bmv = SineBivariateVonMises(locs[0], locs[1], conc[0], conc[1], corr)
-    data = bmv.sample((10_000,))
+    data = bmv.sample((50_000,))
 
     pyro.clear_param_store()
-    adam = pyro.optim.Adam({"lr": .01})
+    adam = pyro.optim.Adam({"lr": .1})
     svi = SVI(mle_model, guide, adam, loss=Trace_ELBO())
 
     losses = []
-    steps = 200
+    steps = 100
     for step in range(steps):
         losses.append(svi.step(data))
 
@@ -128,6 +129,6 @@ def test_mle_bvm():
         if k in actuals:
             actual = actuals[k]
         else:
-            actual = actuals['corr_weight'] * actuals['phi_conc'] * actuals['psi_conc']  # k == 'corr'
+            actual = actuals['corr_weight'] * actuals['phi_conc'] * actuals['psi_conc']
 
-        assert_equal(expected[k].squeeze(), actual.squeeze(), 9e-2)
+        assert_equal(expected[k].squeeze(), actual.squeeze(), 1e-1)

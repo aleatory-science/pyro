@@ -243,7 +243,7 @@ class SineBivariateVonMises(TorchDistribution):
 
         phi_psi = torch.vstack(((phi + self.phi_loc.view((*self.batch_shape, 1)) + pi) % (2 * pi) - pi,
                                 (psi + self.psi_loc.view((*self.batch_shape, 1)) + pi) % (2 * pi) - pi)).T
-        return phi_psi.view(*sample_shape, *self.batch_shape, *self.event_shape)
+        return phi_psi.reshape(*sample_shape, *self.batch_shape, *self.event_shape)
 
     @property
     def mean(self):
@@ -269,17 +269,15 @@ class SineBivariateVonMises(TorchDistribution):
 
     def _bfind(self, eig):
         eig = eig.view(2, -1)
-        b = eig.shape[0] / 2 * torch.ones(self.batch_shape, dtype=torch.float, device=eig.device)
+        b = eig.shape[0] / 2 * torch.ones(self.batch_shape, dtype=torch.float, device=eig.device, requires_grad=True)
         b = b.ravel()
+        b0 = torch.empty_like(b)
         for i in torch.arange(b.shape[0])[eig.norm(0) != 0].T:
             curr_eig = eig[:, i]  # make indexed a non-leaf
-            curr_eig.requires_grad = True
-            curr_b = b[i]  # make indexed a non-leaf
-            curr_b.requires_grad = True
-
+            curr_b = b[i] # make indexed a non-leaf
             g1 = grad(1 - torch.sum(1 / (curr_b + 2 * curr_eig)), curr_b, create_graph=True)[0]
             g2 = grad(g1, curr_b)[0]
-            b[i] -= (1 / g2) * g1
+            b0[i] = curr_b - (1 / g2) * g1
         return b.view(self.batch_shape)
 
     @staticmethod

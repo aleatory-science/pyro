@@ -2,23 +2,23 @@ import pickle
 
 import torch
 import matplotlib.pyplot as plt
-from math import pi
+from torch import no_grad
 
 import pyro
 from pyro.distributions import (
     Beta,
     Categorical,
-    Gamma,
     HalfNormal,
     VonMises,
     SineBivariateVonMises,
     SineSkewed,
-    Uniform, Dirichlet, Normal,
+    Uniform, Dirichlet,
 )
-from pyro.infer import MCMC, NUTS
+from pyro.infer import MCMC, NUTS, config_enumerate, Predictive
 
 
-def model(obs, num_mix_comp=25):
+@config_enumerate
+def model(angles, num_mix_comp=15):
     mix_weights = pyro.sample('mix_weights', Dirichlet(torch.ones((num_mix_comp,))))
 
     with pyro.plate('mixture', num_mix_comp):
@@ -40,37 +40,55 @@ def model(obs, num_mix_comp=25):
 
         assert skewness.shape == (num_mix_comp, 2)
 
-    with pyro.plate('data', obs.size(-2)):
+    with pyro.plate('data', angles.size(-2)):
         assign = pyro.sample('mix_comp', Categorical(mix_weights), )
         bvm = SineBivariateVonMises(phi_loc=phi_loc[assign], psi_loc=psi_loc[assign],
                                     phi_concentration=phi_conc[assign], psi_concentration=psi_conc[assign],
                                     weighted_correlation=corr_scale[assign])
-        pyro.sample('obs', SineSkewed(bvm, skewness[assign]), obs=obs)
+        pyro.sample('phi_psi', SineSkewed(bvm, skewness[assign]), obs=angles)
 
 
-def fetch_dihedrals(split='train'):
+def fetch_dihedrals(split='train', subsample_to=50_000):
     # format one_hot(aa) + phi_angle + psi_angle
+    assert subsample_to > 2
     data = pickle.load(open('data/9mer_fragments_processed.pkl', 'rb'))[split]['sequences'][..., -2:]
-    return torch.tensor(data).view(-1, 2).type(torch.float)
+    data = torch.tensor(data).view(-1, 2).type(torch.float)
+    subsample_to = min(data.shape[0], subsample_to)
+    perm = torch.randint(0, data.shape[0] - 1, size=(subsample_to,))
+    return data[perm]
 
 
-def fetch_toy_dihedrals(split='train'):
+def fetch_toy_dihedrals(split='train', *args, **kwargs):
     # only 45 examples
     data = pickle.load(open('data/9mer_fragments_processed_toy.pkl', 'rb'))[split]['sequences'][..., -2:]
     return torch.tensor(data).view(-1, 2).type(torch.float)
 
 
-def main(show_viz=False):
-    data = fetch_toy_dihedrals()
+def main(num_samples=4, show_viz=False):
+    data = fetch_toy_dihedrals(subsample_to=1000)
 
     if show_viz:
-        plt.scatter(*data.T, alpha=.01, s=20)
+        ramachandran_plot(data)
         plt.show()
-        plt.clf()
 
     kernel = NUTS(model)
-    mcmc = MCMC(kernel, 1, 0)
+    mcmc = MCMC(kernel, num_samples, 0)
     mcmc.run(data)
+    if show_viz:
+        mcmc.summary()
+    post_samples = mcmc.get_samples()
+
+    predictive = Predictive(model_pred, post_samples, num_samples=num_samples)
+    pred_data = predictive()
+
+    if show_viz:
+        ramachandran_plot(pred_data['phi_psi'], 'pred')
+    plt.show()
+
+
+def ramachandran_plot(data, label='ground_truth'):
+    plt.scatter(*data.T, alpha=.5, s=20, label=label)
+    plt.legend()
 
 
 def make_toy():
@@ -80,4 +98,4 @@ def make_toy():
 
 
 if __name__ == '__main__':
-    main()
+    main(show_viz=False)

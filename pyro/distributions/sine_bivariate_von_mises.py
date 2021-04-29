@@ -178,7 +178,6 @@ class SineBivariateVonMises(TorchDistribution):
         eig = torch.stack((torch.zeros_like(eig), eig))
         eigmin = torch.where(eig[1] < 0, eig[1], torch.zeros_like(eig[1], dtype=eig.dtype))
         eig = eig - eigmin
-        eig.requires_grad = True
         b0 = self._bfind(eig)
 
         total = int(torch.prod(torch.tensor(sample_shape)))
@@ -270,11 +269,14 @@ class SineBivariateVonMises(TorchDistribution):
 
     def _bfind(self, eig):
         eig = eig.view(2, -1)
-        b = eig.shape[0] / 2 * torch.ones(self.batch_shape, requires_grad=True, dtype=torch.float, device=eig.device)
+        b = eig.shape[0] / 2 * torch.ones(self.batch_shape, dtype=torch.float, device=eig.device)
         b = b.ravel()
         for i in torch.arange(b.shape[0])[eig.norm(0) != 0].T:
             curr_eig = eig[:, i]  # make indexed a non-leaf
+            curr_eig.requires_grad = True
             curr_b = b[i]  # make indexed a non-leaf
+            curr_b.requires_grad = True
+
             g1 = grad(1 - torch.sum(1 / (curr_b + 2 * curr_eig)), curr_b, create_graph=True)[0]
             g2 = grad(g1, curr_b)[0]
             b[i] -= (1 / g2) * g1

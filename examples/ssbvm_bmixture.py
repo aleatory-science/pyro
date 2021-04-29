@@ -48,16 +48,6 @@ def model(obs, num_mix_comp=25):
         pyro.sample('obs', SineSkewed(bvm, skewness[assign]), obs=obs)
 
 
-def dummy_model(obs, num_mix_comp=2):
-    mix_weights = pyro.sample('mix_weights', Dirichlet(torch.ones((num_mix_comp,))))
-    with pyro.plate('mixture', num_mix_comp):
-        scale = pyro.sample('scale', HalfNormal(1.).expand((2,)).to_event(1))
-        locs = pyro.sample('locs', Normal(0., 1.).expand((2,)).to_event(1))
-    with pyro.plate('data', obs.size(-2)):
-        assign = pyro.sample('mix_comp', Categorical(mix_weights))
-        pyro.sample('obs', Normal(locs[assign], scale[assign]).to_event(1), obs=obs)
-
-
 def fetch_dihedrals(split='train'):
     # format one_hot(aa) + phi_angle + psi_angle
     data = pickle.load(open('data/9mer_fragments_processed.pkl', 'rb'))[split]['sequences'][..., -2:]

@@ -114,6 +114,9 @@ def main(num_samples=10, show_viz=False):
 
 def ramachandran_plot(data, label='ground_truth', color='blue'):
     plt.scatter(*data.T, alpha=.5, s=20, label=label, color=color)
+    plt.xlabel('phi')
+    plt.ylabel('psi')
+    plt.title('Ramachandran plot')
     plt.legend()
 
 

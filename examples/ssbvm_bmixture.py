@@ -2,6 +2,7 @@ import pickle
 
 import torch
 import matplotlib.pyplot as plt
+from math import pi
 
 import pyro
 from pyro.distributions import (
@@ -12,15 +13,14 @@ from pyro.distributions import (
     VonMises,
     SineBivariateVonMises,
     SineSkewed,
-    Uniform,
+    Uniform, Dirichlet, Normal,
 )
 from pyro.infer import MCMC, NUTS
 
 
 def model(obs, num_mix_comp=25):
-    mix_weight_vals = pyro.sample('mix_weight_vals',  # BDA p. 536
-                                  Gamma(torch.ones((num_mix_comp,)) / num_mix_comp, 1.))
-    mix_weights = mix_weight_vals / mix_weight_vals.sum()
+    mix_weights = pyro.sample('mix_weights', Dirichlet(torch.ones((num_mix_comp,))))
+
     with pyro.plate('mixture', num_mix_comp):
         # BvM priors
         phi_loc = pyro.sample('phi_loc', VonMises(0., 1.))
@@ -38,6 +38,8 @@ def model(obs, num_mix_comp=25):
         sign = pyro.sample('sign', Uniform(0., torch.ones((2,))).to_event(1))
         skewness = torch.where(sign < .5, -skewness, skewness)
 
+        assert skewness.shape == (num_mix_comp, 2)
+
     with pyro.plate('data', obs.size(-2)):
         assign = pyro.sample('mix_comp', Categorical(mix_weights), )
         bvm = SineBivariateVonMises(phi_loc=phi_loc[assign], psi_loc=psi_loc[assign],
@@ -46,16 +48,26 @@ def model(obs, num_mix_comp=25):
         pyro.sample('obs', SineSkewed(bvm, skewness[assign]), obs=obs)
 
 
+def dummy_model(obs, num_mix_comp=2):
+    mix_weights = pyro.sample('mix_weights', Dirichlet(torch.ones((num_mix_comp,))))
+    with pyro.plate('mixture', num_mix_comp):
+        scale = pyro.sample('scale', HalfNormal(1.).expand((2,)).to_event(1))
+        locs = pyro.sample('locs', Normal(0., 1.).expand((2,)).to_event(1))
+    with pyro.plate('data', obs.size(-2)):
+        assign = pyro.sample('mix_comp', Categorical(mix_weights))
+        pyro.sample('obs', Normal(locs[assign], scale[assign]).to_event(1), obs=obs)
+
+
 def fetch_dihedrals(split='train'):
     # format one_hot(aa) + phi_angle + psi_angle
     data = pickle.load(open('data/9mer_fragments_processed.pkl', 'rb'))[split]['sequences'][..., -2:]
-    return torch.tensor(data).view(-1, 2)
+    return torch.tensor(data).view(-1, 2).type(torch.float)
 
 
 def fetch_toy_dihedrals(split='train'):
-    # only 5 examples
+    # only 45 examples
     data = pickle.load(open('data/9mer_fragments_processed_toy.pkl', 'rb'))[split]['sequences'][..., -2:]
-    return torch.tensor(data).view(-1, 2)
+    return torch.tensor(data).view(-1, 2).type(torch.float)
 
 
 def main(show_viz=False):

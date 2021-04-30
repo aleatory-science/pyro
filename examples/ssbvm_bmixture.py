@@ -1,5 +1,6 @@
 import pickle
 from functools import partial
+from pathlib import Path
 
 import torch
 import matplotlib.pyplot as plt
@@ -21,7 +22,7 @@ from pyro.infer import MCMC, NUTS, config_enumerate, Predictive
 
 
 @config_enumerate
-def model(num_mix_comp=15):
+def model(num_mix_comp=2):
     mix_weights = pyro.sample('mix_weights', Dirichlet(torch.ones((num_mix_comp,))))
 
     with pyro.plate('mixture', num_mix_comp):
@@ -51,22 +52,8 @@ def model(num_mix_comp=15):
         return pyro.sample('phi_psi', SineSkewed(bvm, skewness[assign]))
 
 
-def cmodel(angles, num_mix_comp=15):
+def cmodel(angles, num_mix_comp=2):
     poutine.condition(model, data={'phi_psi': angles})(num_mix_comp)
-
-
-def dummy_model(num_mix_comp=2):
-    mix_weights = pyro.sample('mix_weights', Dirichlet(torch.ones((num_mix_comp,))))
-    with pyro.plate('mixture', num_mix_comp):
-        scale = pyro.sample('scale', HalfNormal(1.).expand((2,)).to_event(1))
-        locs = pyro.sample('locs', Normal(0., 1.).expand((2,)).to_event(1))
-    with pyro.plate('data'):
-        assign = pyro.sample('mix_comp', Categorical(mix_weights))
-        pyro.sample('phi_psi', Normal(locs[assign], scale[assign]).to_event(1))
-
-
-def cdummy_model(angles, num_mix_comp=5):
-    poutine.condition(dummy_model, data={'phi_psi': angles})(num_mix_comp)
 
 
 def fetch_dihedrals(split='train', subsample_to=50_000):
@@ -85,36 +72,46 @@ def fetch_toy_dihedrals(split='train', *args, **kwargs):
     return torch.tensor(data).view(-1, 2).type(torch.float)
 
 
-def main(num_samples=10, show_viz=False):
+def main(num_samples=1000, show_viz=False):
+    num_mix_comp = 2
     data = fetch_toy_dihedrals(subsample_to=1000)
 
-    if show_viz:
-        ramachandran_plot(data)
-
-    kernel = NUTS(cdummy_model)
-    mcmc = MCMC(kernel, num_samples)
-    mcmc.run(data)
+    kernel = NUTS(cmodel)
+    mcmc = MCMC(kernel, num_samples, num_samples // 2)
+    mcmc.run(data, num_mix_comp)
     if show_viz:
         mcmc.summary()
     post_samples = mcmc.get_samples()
 
-    predictive = Predictive(dummy_model, post_samples, return_sites=('phi_psi',))
+    predictive = Predictive(model, post_samples, return_sites=('phi_psi',))
 
-    pred_data = predictive()
 
+    pred_data = []
+    for _ in range(5):
+        try:
+            pred_data.append(predictive(num_mix_comp)['phi_psi'].squeeze())
+        except:
+            pass
+
+    pred_data = torch.stack(pred_data).view(-1, 2)
     if show_viz:
-        ramachandran_plot(pred_data['phi_psi'], 'pred', color='orange')
-    for _ in range(10):
-        pred_data = predictive()
-
-        if show_viz:
-            ramachandran_plot(pred_data['phi_psi'], None, color='orange')
-    plt.show()
+        ramachandran_plot(data, pred_data, file_name='')
 
 
-def ramachandran_plot(data, label='ground_truth', color='blue'):
-    plt.scatter(*data.T, alpha=.5, s=20, label=label, color=color)
+def ramachandran_plot(obs, pred_data, file_name='rama.png'):
+    plt.scatter(*pred_data.T, alpha=.1, s=20, label='pred', color='orange')
+    plt.scatter(*obs.T, alpha=.5, s=20, label='ground_truth', color='blue')
     plt.legend()
+    plt.xlabel('phi')
+    plt.ylabel('psi')
+    plt.title('Ramachandran plot')
+    if file_name:
+        viz_dir = Path(__file__).parent.parent / 'viz'
+        viz_dir.mkdir(exist_ok=True)
+        plt.savefig(str(viz_dir / file_name))
+    else:
+        plt.show()
+    plt.clf()
 
 
 def make_toy():

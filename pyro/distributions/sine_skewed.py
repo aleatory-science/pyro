@@ -67,7 +67,8 @@ class SineSkewed(TorchDistribution):
         bd = self.base_density
         ys = bd.sample(sample_shape)
         u = Uniform(0, 1.).sample(sample_shape + self.batch_shape)
-        mask = u < 1. + (self.skewness * torch.sin((ys - bd.mean) % (2 * pi))).sum(-1)
+        mask = u < 1. + (self.skewness * torch.sin((ys - bd.mean) % (2 * pi))).view(*(sample_shape + self.batch_shape),
+                                                                                    -1).sum(-1)
         mask = mask.view(*sample_shape, *self.batch_shape, *(1 for _ in bd.event_shape))
         samples = (torch.where(mask, ys, -ys + 2 * bd.mean) + pi) % (2 * pi) - pi
         return samples
@@ -75,9 +76,20 @@ class SineSkewed(TorchDistribution):
     def log_prob(self, value):
         if self._validate_args:
             self._validate_sample(value)
+        flat_event = torch.tensor(self.event_shape).prod()
         bd = self.base_density
-        return bd.log_prob(value) + torch.log(1 + (self.skewness * torch.sin((value - bd.mean) % (2 * pi))).sum(-1))
+        bd_prob = bd.log_prob(value)
+        sine_prob = torch.log(
+            1 + (self.skewness * torch.sin((value - bd.mean) % (2 * pi))).reshape((-1, flat_event)).sum(-1))
+        return (bd_prob.view((-1)) + sine_prob).view(bd_prob.shape)
 
-    @classmethod
-    def infer_shapes(cls, **arg_shapes):
-        return arg_shapes['base_density'], arg_shapes['skewness']
+    def expand(self, batch_shape, _instance=None):
+        batch_shape = torch.Size(batch_shape)
+        new = self._get_checked_instance(SineSkewed, _instance)
+        base_dist = self.base_density.expand(batch_shape, None)
+        new.base_density = base_dist
+        for name in self.arg_constraints:
+            setattr(new, name, getattr(self, name).expand((*batch_shape, *self.event_shape)))
+        super(SineSkewed, new).__init__(batch_shape, self.event_shape, validate_args=None)
+        new._validate_args = self._validate_args
+        return new

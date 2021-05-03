@@ -1,17 +1,14 @@
 import pickle
-from functools import partial
 from pathlib import Path
 
 import torch
 import matplotlib.pyplot as plt
-from torch import no_grad
 
 import pyro
 from pyro import poutine
 from pyro.distributions import (
     Beta,
     Categorical,
-    Normal,
     HalfNormal,
     VonMises,
     SineBivariateVonMises,
@@ -72,39 +69,18 @@ def fetch_toy_dihedrals(split='train', *args, **kwargs):
     return torch.tensor(data).view(-1, 2).type(torch.float)
 
 
-def main(num_samples=1000, show_viz=False):
+def main(num_samples=20, show_viz=False):
     num_mix_comp = 2
     data = fetch_toy_dihedrals(subsample_to=1000)
 
     kernel = NUTS(cmodel)
-<<<<<<< HEAD
-    mcmc = MCMC(kernel, num_samples)
-    mcmc.run(data)
-=======
     mcmc = MCMC(kernel, num_samples, num_samples // 2)
     mcmc.run(data, num_mix_comp)
->>>>>>> 2acf68109368f58879df72cc2872d777b5589098
     if show_viz:
         mcmc.summary()
     post_samples = mcmc.get_samples()
 
     predictive = Predictive(model, post_samples, return_sites=('phi_psi',))
-
-<<<<<<< HEAD
-    pred_data = torch.hstack([predictive()['phi_psi'] for _ in range(10)])
-
-    if show_viz:
-        ramachandran_plot(data, pred_data, file_name=None)
-
-
-def ramachandran_plot(obs, pred, file_name='rama.png'):
-    plt.scatter(*obs.T, alpha=.5, s=20, label='ground_truth', color='blue')
-    plt.scatter(*pred.T, alpha=.5, s=20, label='pred', color='orange')
-    plt.xlabel('phi')
-    plt.ylabel('psi')
-    plt.title('Ramachandran plot')
-    plt.legend()
-=======
 
     pred_data = []
     for _ in range(5):
@@ -125,7 +101,6 @@ def ramachandran_plot(obs, pred_data, file_name='rama.png'):
     plt.xlabel('phi')
     plt.ylabel('psi')
     plt.title('Ramachandran plot')
->>>>>>> 2acf68109368f58879df72cc2872d777b5589098
     if file_name:
         viz_dir = Path(__file__).parent.parent / 'viz'
         viz_dir.mkdir(exist_ok=True)

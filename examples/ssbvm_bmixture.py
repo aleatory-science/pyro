@@ -1,8 +1,14 @@
 import pickle
 from pathlib import Path
+from math import pi
+import warnings
+import logging
 
 import torch
 import matplotlib.pyplot as plt
+
+from pyro.infer.autoguide import init_to_sample, init_to_median
+from tests.common import tensors_default_to
 
 import pyro
 from pyro import poutine
@@ -13,38 +19,37 @@ from pyro.distributions import (
     VonMises,
     SineBivariateVonMises,
     SineSkewed,
-    Uniform, Dirichlet,
+    Uniform, Dirichlet, Gamma, Normal,
 )
 from pyro.infer import MCMC, NUTS, config_enumerate, Predictive
+
+logging.getLogger('matplotlib.font_manager').disabled = True
 
 
 @config_enumerate
 def model(num_mix_comp=2):
+    # Mixture prior
     mix_weights = pyro.sample('mix_weights', Dirichlet(torch.ones((num_mix_comp,))))
-
     with pyro.plate('mixture', num_mix_comp):
         # BvM priors
-        phi_loc = pyro.sample('phi_loc', VonMises(0., 1.))
-        psi_loc = pyro.sample('psi_loc', VonMises(0., 1.))
-        phi_conc = pyro.sample('phi_conc', HalfNormal(2.))
-        psi_conc = pyro.sample('psi_conc', HalfNormal(2.))
-        corr_scale = pyro.sample('corr', Beta(2., 2.))
+        phi_loc = pyro.sample('phi_loc', VonMises(pi, 2.))
+        psi_loc = pyro.sample('psi_loc', VonMises(-1.5 + pi, 2.))
+        phi_conc = pyro.sample('phi_conc', Beta(5., 1.))
+        psi_conc = pyro.sample('psi_conc', Beta(5., 1.))
+        corr_scale = pyro.sample('corr_scale', Beta(2., 5.))
 
         # SS prior
-        skewness = torch.empty((num_mix_comp, 2)).view(-1, 2)
-        tots = torch.zeros(num_mix_comp).view(-1)
-        for i in range(2):
-            skewness[..., i] = pyro.sample(f'skew{i}', Uniform(0., 1 - tots))
-            tots += skewness[..., i]
-        sign = pyro.sample('sign', Uniform(0., torch.ones((2,))).to_event(1))
-        skewness = torch.where(sign < .5, -skewness, skewness)
-
+        skew_phi = pyro.sample('skew_phi', Uniform(-1, 1))
+        psi_bound = (1 - skew_phi.abs())
+        skew_psi = pyro.sample('skew_psi', Uniform(-psi_bound, psi_bound))
+        skewness = torch.stack((skew_phi, skew_psi), dim=-1)
         assert skewness.shape == (num_mix_comp, 2)
 
     with pyro.plate('obs_plate'):
         assign = pyro.sample('mix_comp', Categorical(mix_weights), )
         bvm = SineBivariateVonMises(phi_loc=phi_loc[assign], psi_loc=psi_loc[assign],
-                                    phi_concentration=phi_conc[assign], psi_concentration=psi_conc[assign],
+                                    phi_concentration=1000*phi_conc[assign],
+                                    psi_concentration=1000*psi_conc[assign],
                                     weighted_correlation=corr_scale[assign])
         return pyro.sample('phi_psi', SineSkewed(bvm, skewness[assign]))
 
@@ -53,7 +58,7 @@ def cmodel(angles, num_mix_comp=2):
     poutine.condition(model, data={'phi_psi': angles})(num_mix_comp)
 
 
-def fetch_dihedrals(split='train', subsample_to=50_000):
+def fetch_dihedrals(split='train', subsample_to=1000_000):
     # format one_hot(aa) + phi_angle + psi_angle
     assert subsample_to > 2
     data = pickle.load(open('data/9mer_fragments_processed.pkl', 'rb'))[split]['sequences'][..., -2:]
@@ -69,35 +74,43 @@ def fetch_toy_dihedrals(split='train', *args, **kwargs):
     return torch.tensor(data).view(-1, 2).type(torch.float)
 
 
-def main(num_samples=20, show_viz=False):
-    num_mix_comp = 2
-    data = fetch_toy_dihedrals(subsample_to=1000)
+def main(num_samples=80, show_viz=False, use_cuda=False):
+    num_mix_comp = 35  # expected between 20-50
+    if torch.cuda.is_available() and use_cuda:
+        device_context = tensors_default_to("cuda")
+    else:
+        device_context = tensors_default_to("cpu")
 
-    kernel = NUTS(cmodel)
-    mcmc = MCMC(kernel, num_samples, num_samples // 2)
-    mcmc.run(data, num_mix_comp)
-    if show_viz:
+    with device_context:
+        data = fetch_dihedrals()
+
+        kernel = NUTS(cmodel, max_tree_depth=6, init_strategy=init_to_sample())
+        mcmc = MCMC(kernel, num_samples, num_samples // 2)
+        mcmc.run(data, num_mix_comp)
         mcmc.summary()
-    post_samples = mcmc.get_samples()
+        post_samples = mcmc.get_samples()
+        pickle.dump(post_samples, open(f'ssbvm_bmixture_comp{num_mix_comp}_steps{num_samples}_full.pkl', 'wb'))
 
-    predictive = Predictive(model, post_samples, return_sites=('phi_psi',))
-
-    pred_data = []
-    for _ in range(5):
-        try:
-            pred_data.append(predictive(num_mix_comp)['phi_psi'].squeeze())
-        except:
-            pass
-
-    pred_data = torch.stack(pred_data).view(-1, 2)
     if show_viz:
-        ramachandran_plot(data, pred_data, file_name='')
+        predictive = Predictive(model, post_samples, return_sites=('phi_psi',))
+        pred_data = []
+        fail = 0
+        for _ in range(10):  # TODO: parallelize
+            try:
+                pred_data.append(predictive(num_mix_comp)['phi_psi'].squeeze())
+            except:
+                fail += 1
+        pred_data = torch.stack(pred_data).view(-1, 2).to('cpu')
+        print(f'failed samples {fail}')
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            ramachandran_plot(data.to('cpu'), pred_data)
 
 
 def ramachandran_plot(obs, pred_data, file_name='rama.png'):
-    plt.scatter(*pred_data.T, alpha=.1, s=20, label='pred', color='orange')
-    plt.scatter(*obs.T, alpha=.5, s=20, label='ground_truth', color='blue')
-    plt.legend()
+    plt.scatter(*obs.T, alpha=.1, s=20, label='ground_truth', color='blue')
+    plt.scatter(pred_data[:, 0], pred_data[:, 1], alpha=.5, s=20, label='pred', color='orange')
+    plt.legend(loc='upper right')
     plt.xlabel('phi')
     plt.ylabel('psi')
     plt.title('Ramachandran plot')
@@ -117,4 +130,4 @@ def make_toy():
 
 
 if __name__ == '__main__':
-    main(show_viz=False)
+    main(show_viz=True, use_cuda=True)

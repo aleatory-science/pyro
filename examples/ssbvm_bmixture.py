@@ -48,8 +48,8 @@ def model(num_mix_comp=2):
     with pyro.plate('obs_plate'):
         assign = pyro.sample('mix_comp', Categorical(mix_weights), )
         bvm = SineBivariateVonMises(phi_loc=phi_loc[assign], psi_loc=psi_loc[assign],
-                                    phi_concentration=1000*phi_conc[assign],
-                                    psi_concentration=1000*psi_conc[assign],
+                                    phi_concentration=100*phi_conc[assign],
+                                    psi_concentration=100*psi_conc[assign],
                                     weighted_correlation=corr_scale[assign])
         return pyro.sample('phi_psi', SineSkewed(bvm, skewness[assign]))
 

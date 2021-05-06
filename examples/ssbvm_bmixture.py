@@ -48,8 +48,8 @@ def model(num_mix_comp=2):
     with pyro.plate('obs_plate'):
         assign = pyro.sample('mix_comp', Categorical(mix_weights), )
         bvm = SineBivariateVonMises(phi_loc=phi_loc[assign], psi_loc=psi_loc[assign],
-                                    phi_concentration=100*phi_conc[assign],
-                                    psi_concentration=100*psi_conc[assign],
+                                    phi_concentration=20*phi_conc[assign],
+                                    psi_concentration=20*psi_conc[assign],
                                     weighted_correlation=corr_scale[assign])
         return pyro.sample('phi_psi', SineSkewed(bvm, skewness[assign]))
 
@@ -82,7 +82,7 @@ def main(num_samples=80, show_viz=False, use_cuda=False):
         device_context = tensors_default_to("cpu")
 
     with device_context:
-        data = fetch_dihedrals()
+        data = fetch_dihedrals(subsample_to=25_000)
 
         kernel = NUTS(cmodel, max_tree_depth=6, init_strategy=init_to_sample())
         mcmc = MCMC(kernel, num_samples, num_samples // 2)

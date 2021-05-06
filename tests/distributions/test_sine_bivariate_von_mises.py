@@ -3,25 +3,21 @@
 
 import pytest
 import torch
-from scipy.special import binom, iv
+from scipy.special import binom
 from torch import tensor
 from torch.distributions import Beta, HalfNormal, VonMises
 import matplotlib.pyplot as plt
 
 import pyro
 from pyro.distributions import Geometric, constraints
-from pyro.distributions.sine_bivariate_von_mises import SineBivariateVonMises, log_I1
+from pyro.distributions.sine_bivariate_von_mises import SineBivariateVonMises
 from pyro.infer import SVI, Trace_ELBO
 from tests.common import assert_equal
 
 
 def _unnorm_log_prob(value, loc1, loc2, conc1, conc2, corr):
-    if len(value.shape) == 1:
-        phi_val = value[0]
-        psi_val = value[1]
-    else:
-        phi_val = value[..., 0]
-        psi_val = value[..., 1]
+    phi_val = value[..., 0]
+    psi_val = value[..., 1]
     return (conc1 * torch.cos(phi_val - loc1) + conc2 * torch.cos(psi_val - loc2) +
             corr * torch.sin(phi_val - loc1) * torch.sin(psi_val - loc2))
 
@@ -31,21 +27,6 @@ def test_log_binomial(n):
     comp = SineBivariateVonMises._lbinoms(tensor(n))
     act = tensor([binom(2 * i, i) for i in range(n)]).log()
     assert_equal(act, comp)
-
-
-def test_log_I1_shapes():
-    assert_equal(log_I1(10, tensor(.6)).shape, torch.Size([11, 1]))
-    assert_equal(log_I1(10, tensor([.6])).shape, torch.Size([11, 1]))
-    assert_equal(log_I1(10, tensor([[.6]])).shape, torch.Size([11, 1, 1]))
-    assert_equal(log_I1(10, tensor([.6, .2])).shape, torch.Size([11, 2]))
-    assert_equal(log_I1(0, tensor(.6)).shape, torch.Size((1, 1)))
-
-
-@pytest.mark.parametrize('order', [0, 1, 5, 10, 20])
-def test_log_I1(order):
-    expected = torch.tensor([iv(i, tensor((.6,)).numpy()) for i in range(order + 1)]).log()
-    actual = log_I1(order, tensor([.6]))
-    assert_equal(actual, expected)
 
 
 @pytest.mark.parametrize('batch_dim', [tuple(), (1,), (10,), (2, 1), (2, 1, 2)])
@@ -123,6 +104,7 @@ def test_mle_bvm():
 
     expected = {'phi_loc': locs[0], 'psi_loc': locs[1], 'phi_conc': conc[0], 'psi_conc': conc[1], 'corr': corr}
     actuals = {k: v for k, v in pyro.get_param_store().items()}
+
     for k in expected.keys():
         if k in actuals:
             actual = actuals[k]

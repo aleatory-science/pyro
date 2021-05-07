@@ -30,12 +30,22 @@ logging.getLogger('matplotlib.font_manager').disabled = True
 def model(num_mix_comp=2):
     # Mixture prior
     mix_weights = pyro.sample('mix_weights', Dirichlet(torch.ones((num_mix_comp,))))
+
+    # Hprior BvM
+    # Bayesian Inference and Decision Theory by Kathryn Blackmond Laskey
+    beta_mean_phi = pyro.sample('beta_mean_phi', Uniform(0., 1.))
+    beta_prec_phi = pyro.sample('beta_prec_phi', Gamma(1., 1/20.))  # shape, rate
+    halpha_phi = beta_mean_phi * beta_prec_phi
+    beta_mean_psi = pyro.sample('beta_mean_psi', Uniform(0, 1.))
+    beta_prec_psi = pyro.sample('beta_prec_psi', Gamma(1., 1/20.))  # shape, rate
+    halpha_psi = beta_mean_psi * beta_prec_psi
+
     with pyro.plate('mixture', num_mix_comp):
         # BvM priors
         phi_loc = pyro.sample('phi_loc', VonMises(pi, 2.))
         psi_loc = pyro.sample('psi_loc', VonMises(-1.5 + pi, 2.))
-        phi_conc = pyro.sample('phi_conc', Beta(5., 1.))
-        psi_conc = pyro.sample('psi_conc', Beta(5., 1.))
+        phi_conc = pyro.sample('phi_conc', Beta(halpha_phi, beta_prec_phi - halpha_phi))
+        psi_conc = pyro.sample('psi_conc', Beta(halpha_psi, beta_prec_psi - halpha_psi))
         corr_scale = pyro.sample('corr_scale', Beta(2., 5.))
 
         # SS prior
@@ -48,8 +58,8 @@ def model(num_mix_comp=2):
     with pyro.plate('obs_plate'):
         assign = pyro.sample('mix_comp', Categorical(mix_weights), )
         bvm = SineBivariateVonMises(phi_loc=phi_loc[assign], psi_loc=psi_loc[assign],
-                                    phi_concentration=20*phi_conc[assign],
-                                    psi_concentration=20*psi_conc[assign],
+                                    phi_concentration=80 * phi_conc[assign],
+                                    psi_concentration=55 * psi_conc[assign],
                                     weighted_correlation=corr_scale[assign])
         return pyro.sample('phi_psi', SineSkewed(bvm, skewness[assign]))
 

@@ -62,8 +62,8 @@ class SineSkewed(TorchDistribution):
 
     def __repr__(self):
         args_string = ', '.join(['{}: {}'.format(p, getattr(self, p)
-                                if getattr(self, p).numel() == 1
-                                else getattr(self, p).size()) for p in self.arg_constraints.keys()])
+        if getattr(self, p).numel() == 1
+        else getattr(self, p).size()) for p in self.arg_constraints.keys()])
         return self.__class__.__name__ + '(' + f'base_density: {str(self.base_dist)}, ' + args_string + ')'
 
     def sample(self, sample_shape=torch.Size()):
@@ -71,7 +71,7 @@ class SineSkewed(TorchDistribution):
         ys = bd.sample(sample_shape)
         u = Uniform(0., torch.ones(torch.Size([]), device=self.skewness.device)).sample(sample_shape + self.batch_shape)
 
-        mask = u < 1. + (self.skewness * torch.sin((ys - bd.mean) % (2 * pi))).sum(-1)
+        mask = u < 5. + .5 * (self.skewness * torch.sin((ys - bd.mean) % (2 * pi))).sum(-1)
         mask = mask[..., None]
         samples = (torch.where(mask, ys, -ys + 2 * bd.mean) + pi) % (2 * pi) - pi
         return samples

@@ -8,7 +8,7 @@ import seaborn as sns
 import torch
 import matplotlib.pyplot as plt
 
-from pyro.infer.autoguide import init_to_sample
+from pyro.infer.autoguide import init_to_sample, init_to_median
 from tests.common import tensors_default_to
 
 import pyro
@@ -35,10 +35,10 @@ def model(num_mix_comp=2):
     # Hprior BvM
     # Bayesian Inference and Decision Theory by Kathryn Blackmond Laskey
     beta_mean_phi = pyro.sample('beta_mean_phi', Uniform(0., 1.))
-    beta_prec_phi = pyro.sample('beta_prec_phi', Gamma(1., 1/20.))  # shape, rate
+    beta_prec_phi = pyro.sample('beta_prec_phi', Gamma(1., 1 / 20.))  # shape, rate
     halpha_phi = beta_mean_phi * beta_prec_phi
     beta_mean_psi = pyro.sample('beta_mean_psi', Uniform(0, 1.))
-    beta_prec_psi = pyro.sample('beta_prec_psi', Gamma(1., 1/20.))  # shape, rate
+    beta_prec_psi = pyro.sample('beta_prec_psi', Gamma(1., 1 / 20.))  # shape, rate
     halpha_psi = beta_mean_psi * beta_prec_psi
 
     with pyro.plate('mixture', num_mix_comp):
@@ -60,7 +60,7 @@ def model(num_mix_comp=2):
         assign = pyro.sample('mix_comp', Categorical(mix_weights), )
         bvm = SineBivariateVonMises(phi_loc=phi_loc[assign], psi_loc=psi_loc[assign],
                                     phi_concentration=10 * phi_conc[assign],
-                                    psi_concentration=10 * psi_conc[assign],
+                                    psi_concentration=20 * psi_conc[assign],
                                     weighted_correlation=corr_scale[assign])
         return pyro.sample('phi_psi', SineSkewed(bvm, skewness[assign]))
 
@@ -85,7 +85,7 @@ def fetch_toy_dihedrals(split='train', *args, **kwargs):
     return torch.tensor(data).view(-1, 2).type(torch.float)
 
 
-def main(num_samples=40, show_viz=False, use_cuda=False):
+def main(num_samples=80, show_viz=False, use_cuda=False):
     num_mix_comp = 35  # expected between 20-50
     if torch.cuda.is_available() and use_cuda:
         device_context = tensors_default_to("cuda")
@@ -103,10 +103,10 @@ def main(num_samples=40, show_viz=False, use_cuda=False):
         pickle.dump(post_samples, open(f'ssbvm_bmixture_comp{num_mix_comp}_steps{num_samples}_full.pkl', 'wb'))
 
     if show_viz:
-        predictive = Predictive(model, post_samples, return_sites=('phi_psi',), parallel=True)
+        predictive = Predictive(model, post_samples, return_sites=('phi_psi',))
         pred_data = []
         fail = 0
-        for _ in range(10):  # TODO: parallelize
+        for _ in range(1):  # TODO: parallelize
             try:
                 pred_data.append(predictive(num_mix_comp)['phi_psi'].squeeze())
             except:
@@ -132,6 +132,7 @@ def kde_ramachandran_plot(pred_data, file_name='kde_rama.png'):
     else:
         plt.show()
     plt.clf()
+
 
 def ramachandran_plot(obs, pred_data, file_name='rama.png'):
     plt.scatter(*obs.T, alpha=.1, s=20, label='ground_truth', color='blue')

@@ -20,10 +20,10 @@ class SineSkewed(TorchDistribution):
 
         def model(...):
             ...
-            skewness_phi = pyro.sample(f'skewness_phi', Uniform(skewness.abs().sum(), 1 - tots))
+            skew_phi = pyro.sample(f'skew_phi', Uniform(-1., 1.))
             psi_bound = 1 - skewness_phi.abs()
-            skewness_psi = pyro.sample(f'skewness_psi', Uniform(-psi_bound, psi_bound)
-            skewness = torch.stack((skewness_phi, skewness_psi), dim=0)
+            skew_psi = pyro.sample(f'skew_psi', Uniform(-1, 1.))
+            skewness = torch.stack((skew_phi, psi_bound * skew_psi), dim=0)
             ...
 
     In the context of :class:`~pyro.infer.SVI`, this distribution can be freely used as a likelihood, but use as a
@@ -62,8 +62,8 @@ class SineSkewed(TorchDistribution):
 
     def __repr__(self):
         args_string = ', '.join(['{}: {}'.format(p, getattr(self, p)
-        if getattr(self, p).numel() == 1
-        else getattr(self, p).size()) for p in self.arg_constraints.keys()])
+                                if getattr(self, p).numel() == 1
+                                else getattr(self, p).size()) for p in self.arg_constraints.keys()])
         return self.__class__.__name__ + '(' + f'base_density: {str(self.base_dist)}, ' + args_string + ')'
 
     def sample(self, sample_shape=torch.Size()):
@@ -71,7 +71,8 @@ class SineSkewed(TorchDistribution):
         ys = bd.sample(sample_shape)
         u = Uniform(0., torch.ones(torch.Size([]), device=self.skewness.device)).sample(sample_shape + self.batch_shape)
 
-        mask = u <= 5. + .5 * (self.skewness * torch.sin((ys - bd.mean + pi) % (2 * pi) - pi)).sum(-1)
+        # Section 2.3 step 3 in [1]
+        mask = u <= .5 + .5 * (self.skewness * torch.sin((ys - bd.mean) % (2 * pi))).sum(-1)
         mask = mask[..., None]
         samples = (torch.where(mask, ys, -ys + 2 * bd.mean) + pi) % (2 * pi) - pi
         return samples
@@ -79,8 +80,9 @@ class SineSkewed(TorchDistribution):
     def log_prob(self, value):
         if self._validate_args:
             self._validate_sample(value)
-        skew_prob = torch.log(
-            1 + (self.skewness * torch.sin((value - self.base_dist.mean + pi) % (2 * pi) - pi)).sum(-1))
+
+        # Eq. 2.1 in [1]
+        skew_prob = torch.log(1 + (self.skewness * torch.sin((value - self.base_dist.mean) % (2 * pi))).sum(-1))
         return self.base_dist.log_prob(value) + skew_prob
 
     def expand(self, batch_shape, _instance=None):

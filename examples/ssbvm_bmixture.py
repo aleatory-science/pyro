@@ -7,6 +7,7 @@ import seaborn as sns
 
 import torch
 import matplotlib.pyplot as plt
+from torch.distributions import AffineTransform
 
 from pyro.infer.autoguide import init_to_sample, init_to_median
 from tests.common import tensors_default_to
@@ -17,10 +18,11 @@ from pyro.distributions import (
     Beta,
     Categorical,
     HalfNormal,
+    TransformedDistribution,
     VonMises,
     SineBivariateVonMises,
     SineSkewed,
-    Uniform, Dirichlet, Gamma, Normal,
+    Uniform, Dirichlet, Gamma,
 )
 from pyro.infer import MCMC, NUTS, config_enumerate, Predictive
 
@@ -50,16 +52,16 @@ def model(num_mix_comp=2):
         corr_scale = pyro.sample('corr_scale', Beta(2., 5.))
 
         # SS prior
-        skew_phi = pyro.sample('skew_phi', Uniform(-1, 1))
-        psi_bound = (1 - skew_phi.abs())
-        skew_psi = pyro.sample('skew_psi', Uniform(-psi_bound, psi_bound))
-        skewness = torch.stack((skew_phi, skew_psi), dim=-1)
+        skew_phi = pyro.sample('skew_phi', Uniform(-1., 1.))
+        psi_bound = 1 - skew_phi.abs()
+        skew_psi = pyro.sample('skew_psi', Uniform(-1., 1.))
+        skewness = torch.stack((skew_phi, psi_bound * skew_psi), dim=-1)
         assert skewness.shape == (num_mix_comp, 2)
 
     with pyro.plate('obs_plate'):
         assign = pyro.sample('mix_comp', Categorical(mix_weights), )
         bvm = SineBivariateVonMises(phi_loc=phi_loc[assign], psi_loc=psi_loc[assign],
-                                    phi_concentration=10 * phi_conc[assign],
+                                    phi_concentration=20 * phi_conc[assign],
                                     psi_concentration=20 * psi_conc[assign],
                                     weighted_correlation=corr_scale[assign])
         return pyro.sample('phi_psi', SineSkewed(bvm, skewness[assign]))
@@ -106,10 +108,11 @@ def main(num_samples=80, show_viz=False, use_cuda=False):
         predictive = Predictive(model, post_samples, return_sites=('phi_psi',))
         pred_data = []
         fail = 0
-        for _ in range(1):  # TODO: parallelize
+        for _ in range(5):  # TODO: parallelize
             try:
                 pred_data.append(predictive(num_mix_comp)['phi_psi'].squeeze())
-            except:
+            except Exception as e:
+                print(e)
                 fail += 1
         pred_data = torch.stack(pred_data).view(-1, 2).to('cpu')
         print(f'failed samples {fail}')

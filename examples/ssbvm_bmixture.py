@@ -3,11 +3,12 @@ from pathlib import Path
 from math import pi
 import warnings
 import logging
+import seaborn as sns
 
 import torch
 import matplotlib.pyplot as plt
 
-from pyro.infer.autoguide import init_to_sample, init_to_median
+from pyro.infer.autoguide import init_to_sample
 from tests.common import tensors_default_to
 
 import pyro
@@ -58,8 +59,8 @@ def model(num_mix_comp=2):
     with pyro.plate('obs_plate'):
         assign = pyro.sample('mix_comp', Categorical(mix_weights), )
         bvm = SineBivariateVonMises(phi_loc=phi_loc[assign], psi_loc=psi_loc[assign],
-                                    phi_concentration=80 * phi_conc[assign],
-                                    psi_concentration=55 * psi_conc[assign],
+                                    phi_concentration=10 * phi_conc[assign],
+                                    psi_concentration=10 * psi_conc[assign],
                                     weighted_correlation=corr_scale[assign])
         return pyro.sample('phi_psi', SineSkewed(bvm, skewness[assign]))
 
@@ -84,7 +85,7 @@ def fetch_toy_dihedrals(split='train', *args, **kwargs):
     return torch.tensor(data).view(-1, 2).type(torch.float)
 
 
-def main(num_samples=80, show_viz=False, use_cuda=False):
+def main(num_samples=40, show_viz=False, use_cuda=False):
     num_mix_comp = 35  # expected between 20-50
     if torch.cuda.is_available() and use_cuda:
         device_context = tensors_default_to("cuda")
@@ -102,7 +103,7 @@ def main(num_samples=80, show_viz=False, use_cuda=False):
         pickle.dump(post_samples, open(f'ssbvm_bmixture_comp{num_mix_comp}_steps{num_samples}_full.pkl', 'wb'))
 
     if show_viz:
-        predictive = Predictive(model, post_samples, return_sites=('phi_psi',))
+        predictive = Predictive(model, post_samples, return_sites=('phi_psi',), parallel=True)
         pred_data = []
         fail = 0
         for _ in range(10):  # TODO: parallelize
@@ -115,7 +116,22 @@ def main(num_samples=80, show_viz=False, use_cuda=False):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             ramachandran_plot(data.to('cpu'), pred_data)
+            kde_ramachandran_plot(pred_data)
 
+
+def kde_ramachandran_plot(pred_data, file_name='kde_rama.png'):
+    sns.kdeplot(pred_data[:, 0], pred_data[:, 1], label='pred', color='orange')
+    plt.legend(loc='upper right')
+    plt.xlabel('phi')
+    plt.ylabel('psi')
+    plt.title('Ramachandran plot')
+    if file_name:
+        viz_dir = Path(__file__).parent.parent / 'viz'
+        viz_dir.mkdir(exist_ok=True)
+        plt.savefig(str(viz_dir / file_name))
+    else:
+        plt.show()
+    plt.clf()
 
 def ramachandran_plot(obs, pred_data, file_name='rama.png'):
     plt.scatter(*obs.T, alpha=.1, s=20, label='ground_truth', color='blue')

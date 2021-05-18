@@ -85,8 +85,7 @@ def fetch_toy_dihedrals(split='train', *args, **kwargs):
     return torch.tensor(data).view(-1, 2).type(torch.float)
 
 
-# def main(num_samples=640, show_viz=False, use_cuda=False):
-def main(num_samples=30, show_viz=False, use_cuda=False, compute_waic=False):
+def main(num_samples=640, show_viz=False, use_cuda=False, compute_waic=False):
     num_mix_comp = 20  # expected between 20-50
     if torch.cuda.is_available() and use_cuda:
         device_context = tensors_default_to("cuda")
@@ -108,6 +107,7 @@ def main(num_samples=30, show_viz=False, use_cuda=False, compute_waic=False):
                                      return_trace=True)
         [tr.compute_log_prob(lambda name, _: name == 'phi_psi') for tr in trs]
         ic, neff = waic(torch.stack([tr.nodes['phi_psi']['log_prob'] for tr in trs], dim=0).mean(0))
+        print(ic, neff)
 
     if show_viz:
         predictive = Predictive(model, post_samples, return_sites=('phi_psi',))

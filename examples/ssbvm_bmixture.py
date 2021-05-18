@@ -3,6 +3,8 @@ from pathlib import Path
 from math import pi
 import warnings
 import logging
+from time import time
+
 import seaborn as sns
 
 import torch
@@ -37,10 +39,10 @@ def model(num_mix_comp=2):
     # Hprior BvM
     # Bayesian Inference and Decision Theory by Kathryn Blackmond Laskey
     beta_mean_phi = pyro.sample('beta_mean_phi', Uniform(0., 1.))
-    beta_prec_phi = pyro.sample('beta_prec_phi', Gamma(1., 1 / 20.))  # shape, rate
+    beta_prec_phi = pyro.sample('beta_prec_phi', Gamma(1., 1 / num_mix_comp))  # shape, rate
     halpha_phi = beta_mean_phi * beta_prec_phi
     beta_mean_psi = pyro.sample('beta_mean_psi', Uniform(0, 1.))
-    beta_prec_psi = pyro.sample('beta_prec_psi', Gamma(1., 1 / 20.))  # shape, rate
+    beta_prec_psi = pyro.sample('beta_prec_psi', Gamma(1., 1 / num_mix_comp))  # shape, rate
     halpha_psi = beta_mean_psi * beta_prec_psi
 
     with pyro.plate('mixture', num_mix_comp):
@@ -61,8 +63,8 @@ def model(num_mix_comp=2):
     with pyro.plate('obs_plate'):
         assign = pyro.sample('mix_comp', Categorical(mix_weights), )
         bvm = SineBivariateVonMises(phi_loc=phi_loc[assign], psi_loc=psi_loc[assign],
-                                    phi_concentration=20 * phi_conc[assign],
-                                    psi_concentration=20 * psi_conc[assign],
+                                    phi_concentration=150 * phi_conc[assign],
+                                    psi_concentration=150 * psi_conc[assign],
                                     weighted_correlation=corr_scale[assign])
         return pyro.sample('phi_psi', SineSkewed(bvm, skewness[assign]))
 
@@ -87,15 +89,15 @@ def fetch_toy_dihedrals(split='train', *args, **kwargs):
     return torch.tensor(data).view(-1, 2).type(torch.float)
 
 
-def main(num_samples=80, show_viz=False, use_cuda=False):
-    num_mix_comp = 35  # expected between 20-50
+def main(num_samples=640, show_viz=False, use_cuda=False):
+    num_mix_comp = 2  # expected between 20-50
     if torch.cuda.is_available() and use_cuda:
         device_context = tensors_default_to("cuda")
     else:
         device_context = tensors_default_to("cpu")
 
     with device_context:
-        data = fetch_dihedrals(subsample_to=25_000)
+        data = fetch_dihedrals(subsample_to=50_000)
 
         kernel = NUTS(cmodel, max_tree_depth=6, init_strategy=init_to_sample())
         mcmc = MCMC(kernel, num_samples, num_samples // 2)
@@ -122,8 +124,9 @@ def main(num_samples=80, show_viz=False, use_cuda=False):
             kde_ramachandran_plot(pred_data)
 
 
-def kde_ramachandran_plot(pred_data, file_name='kde_rama.png'):
-    sns.kdeplot(pred_data[:, 0], pred_data[:, 1], label='pred', color='orange')
+def kde_ramachandran_plot(pred_data, data, file_name='kde_rama.png'):
+    plt.scatter(data[:, 0], data[:, 1], alpha=.01, color='k')
+    sns.kdeplot(pred_data[:, 0].numpy(), pred_data[:, 1].numpy(), label='Predictions', cmap='coolwarm')
     plt.legend(loc='upper right')
     plt.xlabel('phi')
     plt.ylabel('psi')

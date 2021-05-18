@@ -1,32 +1,28 @@
-import pickle
-from pathlib import Path
-from math import pi
-import warnings
 import logging
-from time import time
+import pickle
+import warnings
+from math import pi
+from pathlib import Path
 
-import seaborn as sns
-
-import torch
 import matplotlib.pyplot as plt
-from torch.distributions import AffineTransform
-
-from pyro.infer.autoguide import init_to_sample, init_to_median
-from tests.common import tensors_default_to
+import seaborn as sns
+import torch
 
 import pyro
 from pyro import poutine
 from pyro.distributions import (
     Beta,
     Categorical,
-    HalfNormal,
-    TransformedDistribution,
     VonMises,
     SineBivariateVonMises,
     SineSkewed,
     Uniform, Dirichlet, Gamma,
 )
 from pyro.infer import MCMC, NUTS, config_enumerate, Predictive
+from pyro.infer.autoguide import init_to_sample
+from pyro.infer.mcmc.util import _predictive_sequential
+from pyro.ops.stats import waic
+from tests.common import tensors_default_to
 
 logging.getLogger('matplotlib.font_manager').disabled = True
 
@@ -89,8 +85,9 @@ def fetch_toy_dihedrals(split='train', *args, **kwargs):
     return torch.tensor(data).view(-1, 2).type(torch.float)
 
 
-def main(num_samples=640, show_viz=False, use_cuda=False):
-    num_mix_comp = 2  # expected between 20-50
+# def main(num_samples=640, show_viz=False, use_cuda=False):
+def main(num_samples=30, show_viz=False, use_cuda=False, compute_waic=False):
+    num_mix_comp = 20  # expected between 20-50
     if torch.cuda.is_available() and use_cuda:
         device_context = tensors_default_to("cuda")
     else:
@@ -105,6 +102,12 @@ def main(num_samples=640, show_viz=False, use_cuda=False):
         mcmc.summary()
         post_samples = mcmc.get_samples()
         pickle.dump(post_samples, open(f'ssbvm_bmixture_comp{num_mix_comp}_steps{num_samples}_full.pkl', 'wb'))
+
+    if compute_waic:
+        trs = _predictive_sequential(cmodel, post_samples, (data, num_mix_comp), {}, num_samples, tuple(),
+                                     return_trace=True)
+        [tr.compute_log_prob(lambda name, _: name == 'phi_psi') for tr in trs]
+        ic, neff = waic(torch.stack([tr.nodes['phi_psi']['log_prob'] for tr in trs], dim=0).mean(0))
 
     if show_viz:
         predictive = Predictive(model, post_samples, return_sites=('phi_psi',))
@@ -121,7 +124,7 @@ def main(num_samples=640, show_viz=False, use_cuda=False):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             ramachandran_plot(data.to('cpu'), pred_data)
-            kde_ramachandran_plot(pred_data)
+            kde_ramachandran_plot(pred_data, data)
 
 
 def kde_ramachandran_plot(pred_data, data, file_name='kde_rama.png'):
@@ -163,4 +166,4 @@ def make_toy():
 
 
 if __name__ == '__main__':
-    main(show_viz=True, use_cuda=True)
+    main(show_viz=True, use_cuda=True, compute_waic=True)

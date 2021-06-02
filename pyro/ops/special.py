@@ -101,7 +101,7 @@ def log_binomial(n, k, tol=0.):
     return -n_plus_1.log() - log_beta(k + 1, n_plus_1 - k, tol=tol)
 
 
-def log_I1(orders: int, value: torch.Tensor, terms=250):
+def log_I1(orders: int, value: torch.Tensor, terms=10):
     r""" Compute first n log modified bessel function of first kind
     .. math ::
 

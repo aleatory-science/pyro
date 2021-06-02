@@ -65,7 +65,7 @@ class SineBivariateVonMises(TorchDistribution):
                        'phi_concentration': constraints.positive, 'psi_concentration': constraints.positive,
                        'correlation': constraints.real}
     support = constraints.independent(constraints.real, 1)
-    max_sample_iter = 1000
+    max_sample_iter = 2000
 
     def __init__(self, phi_loc, psi_loc, phi_concentration, psi_concentration, correlation=None,
                  weighted_correlation=None, validate_args=None):
@@ -182,7 +182,7 @@ class SineBivariateVonMises(TorchDistribution):
 
         if max_iter == 0 or torch.any(missing > 0):
             raise ValueError("maximum number of iterations exceeded; "
-                             "try increasing `SineBivariateVonMises.max_sample_iter`")
+                             "try increasing `SineBivariateVonMises.max_sample_iter` for " + str(self))
 
         phi = torch.atan2(phi[1], phi[0])
 

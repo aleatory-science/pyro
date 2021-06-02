@@ -1,12 +1,12 @@
 # Copyright Contributors to the Pyro project.
 # SPDX-License-Identifier: Apache-2.0
 
+import matplotlib.pyplot as plt
 import pytest
 import torch
 from scipy.special import binom
 from torch import tensor
 from torch.distributions import Beta, HalfNormal, VonMises
-import matplotlib.pyplot as plt
 
 import pyro
 from pyro.distributions import Geometric, constraints
